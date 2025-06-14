@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { 
@@ -18,8 +18,17 @@ import {
   Home,
   User
 } from 'lucide-react'
-import { Role } from '@prisma/client'
 import MessageNotification from './MessageNotification'
+
+// Define role constants to avoid Prisma client issues
+const ROLES = {
+  STAFF: 'STAFF',
+  MANAGER: 'MANAGER',
+  HR: 'HR',
+  ADMIN: 'ADMIN'
+} as const
+
+type UserRole = typeof ROLES[keyof typeof ROLES]
 
 interface LayoutProps {
   children: React.ReactNode
@@ -45,42 +54,42 @@ export default function Layout({ children }: LayoutProps) {
       name: 'Dashboard',
       href: `/${user.role.toLowerCase()}`,
       icon: Home,
-      roles: [Role.STAFF, Role.MANAGER, Role.HR, Role.ADMIN]
+      roles: [ROLES.STAFF, ROLES.MANAGER, ROLES.HR, ROLES.ADMIN]
     },
     {
       name: 'My Timesheet',
       href: '/staff',
       icon: Clock,
-      roles: [Role.STAFF]
+      roles: [ROLES.STAFF]
     },
     {
       name: 'Approvals',
       href: '/manager',
       icon: CheckCircle,
-      roles: [Role.MANAGER]
+      roles: [ROLES.MANAGER]
     },
     {
       name: 'HR Dashboard',
       href: '/hr',
       icon: Users,
-      roles: [Role.HR, Role.ADMIN]
+      roles: [ROLES.HR, ROLES.ADMIN]
     },
     {
       name: 'Reports',
       href: '/hr?tab=reports',
       icon: FileText,
-      roles: [Role.HR, Role.ADMIN]
+      roles: [ROLES.HR, ROLES.ADMIN]
     },
     {
       name: 'Settings',
       href: '/hr?tab=settings',
       icon: Settings,
-      roles: [Role.HR, Role.ADMIN]
+      roles: [ROLES.HR, ROLES.ADMIN]
     }
   ]
 
   const filteredNavigation = navigation.filter(item => 
-    item.roles.includes(user.role as Role)
+    item.roles.includes(user.role as UserRole)
   )
 
   const isActive = (href: string) => {

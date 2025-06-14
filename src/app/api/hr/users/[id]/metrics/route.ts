@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
 import { prisma } from '@/lib/db'
-import { Role } from '@prisma/client'
+
+// Local constants to replace Prisma enums
+const ROLES = {
+  HR: 'HR',
+  ADMIN: 'ADMIN'
+} as const
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns'
 
 export async function GET(
@@ -22,7 +27,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    if (user.role !== Role.HR && user.role !== Role.ADMIN) {
+    if (user.role !== 'HR' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

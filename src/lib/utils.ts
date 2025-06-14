@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { startOfMonth, endOfMonth, addDays, format, parseISO, differenceInMinutes } from "date-fns"
+import { startOfMonth, endOfMonth, addDays, format, parseISO, differenceInMinutes, subMonths, addMonths } from "date-fns"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -42,41 +42,42 @@ export function getPayPeriodDates(periodStart: Date, periodEnd: Date): Date[] {
 
 // Time calculation utilities
 export function calculateDailyHours(
-  in1?: Date | null,
-  out1?: Date | null,
-  in2?: Date | null,
-  out2?: Date | null,
-  in3?: Date | null,
-  out3?: Date | null,
+  in1?: Date | string | null,
+  out1?: Date | string | null,
+  in2?: Date | string | null,
+  out2?: Date | string | null,
+  in3?: Date | string | null,
+  out3?: Date | string | null,
   plawaHours: number = 0
 ): number {
   let totalMinutes = 0
   
-  // Debug logging
-  console.log('calculateDailyHours called with:', {
-    in1: in1?.toISOString(),
-    out1: out1?.toISOString(),
-    in2: in2?.toISOString(),
-    out2: out2?.toISOString(),
-    in3: in3?.toISOString(),
-    out3: out3?.toISOString(),
-    plawaHours
-  })
+  // Helper function to convert string dates to Date objects
+  const toDate = (dateValue?: Date | string | null): Date | null => {
+    if (!dateValue) return null
+    if (dateValue instanceof Date) return dateValue
+    return new Date(dateValue)
+  }
+  
+  // Convert all inputs to Date objects
+  const date1In = toDate(in1)
+  const date1Out = toDate(out1)
+  const date2In = toDate(in2)
+  const date2Out = toDate(out2)
+  const date3In = toDate(in3)
+  const date3Out = toDate(out3)
   
   // Calculate minutes for each time pair
-  if (in1 && out1) {
-    const minutes1 = differenceInMinutes(out1, in1)
-    console.log(`Period 1: ${minutes1} minutes (${in1.toISOString()} to ${out1.toISOString()})`)
+  if (date1In && date1Out) {
+    const minutes1 = differenceInMinutes(date1Out, date1In)
     totalMinutes += minutes1
   }
-  if (in2 && out2) {
-    const minutes2 = differenceInMinutes(out2, in2)
-    console.log(`Period 2: ${minutes2} minutes (${in2.toISOString()} to ${out2.toISOString()})`)
+  if (date2In && date2Out) {
+    const minutes2 = differenceInMinutes(date2Out, date2In)
     totalMinutes += minutes2
   }
-  if (in3 && out3) {
-    const minutes3 = differenceInMinutes(out3, in3)
-    console.log(`Period 3: ${minutes3} minutes (${in3.toISOString()} to ${out3.toISOString()})`)
+  if (date3In && date3Out) {
+    const minutes3 = differenceInMinutes(date3Out, date3In)
     totalMinutes += minutes3
   }
   
@@ -84,18 +85,16 @@ export function calculateDailyHours(
   const workHours = totalMinutes / 60
   const result = Math.round((workHours + plawaHours) * 100) / 100
   
-  console.log(`Total minutes: ${totalMinutes}, Work hours: ${workHours}, PLAWA: ${plawaHours}, Result: ${result}`)
-  
   return result // Round to 2 decimal places
 }
 
 export function calculatePeriodTotal(entries: Array<{
-  in1?: Date | null
-  out1?: Date | null
-  in2?: Date | null
-  out2?: Date | null
-  in3?: Date | null
-  out3?: Date | null
+  in1?: Date | string | null
+  out1?: Date | string | null
+  in2?: Date | string | null
+  out2?: Date | string | null
+  in3?: Date | string | null
+  out3?: Date | string | null
   plawaHours: number
 }>): number {
   const total = entries.reduce((sum, entry) => {
@@ -115,31 +114,46 @@ export function calculatePeriodTotal(entries: Array<{
 
 // Validation utilities
 export function validateTimeEntry(
-  in1?: Date | null,
-  out1?: Date | null,
-  in2?: Date | null,
-  out2?: Date | null,
-  in3?: Date | null,
-  out3?: Date | null
+  in1?: Date | string | null,
+  out1?: Date | string | null,
+  in2?: Date | string | null,
+  out2?: Date | string | null,
+  in3?: Date | string | null,
+  out3?: Date | string | null
 ): { isValid: boolean; errors: string[] } {
   const errors: string[] = []
   
+  // Helper function to convert string dates to Date objects
+  const toDate = (dateValue?: Date | string | null): Date | null => {
+    if (!dateValue) return null
+    if (dateValue instanceof Date) return dateValue
+    return new Date(dateValue)
+  }
+  
+  // Convert all inputs to Date objects
+  const date1In = toDate(in1)
+  const date1Out = toDate(out1)
+  const date2In = toDate(in2)
+  const date2Out = toDate(out2)
+  const date3In = toDate(in3)
+  const date3Out = toDate(out3)
+  
   // Check that each in time is before its corresponding out time
-  if (in1 && out1 && in1 >= out1) {
+  if (date1In && date1Out && date1In >= date1Out) {
     errors.push("First in time must be before first out time")
   }
-  if (in2 && out2 && in2 >= out2) {
+  if (date2In && date2Out && date2In >= date2Out) {
     errors.push("Second in time must be before second out time")
   }
-  if (in3 && out3 && in3 >= out3) {
+  if (date3In && date3Out && date3In >= date3Out) {
     errors.push("Third in time must be before third out time")
   }
   
   // Check for overlapping time periods
   const periods: Array<{ start: Date; end: Date }> = []
-  if (in1 && out1) periods.push({ start: in1, end: out1 })
-  if (in2 && out2) periods.push({ start: in2, end: out2 })
-  if (in3 && out3) periods.push({ start: in3, end: out3 })
+  if (date1In && date1Out) periods.push({ start: date1In, end: date1Out })
+  if (date2In && date2Out) periods.push({ start: date2In, end: date2Out })
+  if (date3In && date3Out) periods.push({ start: date3In, end: date3Out })
   
   for (let i = 0; i < periods.length; i++) {
     for (let j = i + 1; j < periods.length; j++) {
@@ -174,7 +188,7 @@ export function validatePlawaHours(plawaHours: number): { isValid: boolean; erro
 
 // Format utilities
 export function formatTime(date: Date): string {
-  return format(date, 'HH:mm')
+  return format(date, 'h:mm a')
 }
 
 export function formatDate(date: Date): string {
@@ -190,6 +204,121 @@ export function parseTimeString(timeString: string, baseDate: Date): Date {
   const result = new Date(baseDate)
   result.setHours(hours, minutes, 0, 0)
   return result
+}
+
+// Pay period utilities
+export function getPayPeriodFromDate(date: Date) {
+  return getCurrentPayPeriod(date)
+}
+
+export function generateAvailablePayPeriods(monthsBack: number = 6, monthsForward: number = 3): Array<{
+  start: Date
+  end: Date
+  label: string
+  isCurrent: boolean
+  isPast: boolean
+  isFuture: boolean
+}> {
+  const periods: Array<{
+    start: Date
+    end: Date
+    label: string
+    isCurrent: boolean
+    isPast: boolean
+    isFuture: boolean
+  }> = []
+  
+  const today = new Date()
+  const currentPeriod = getCurrentPayPeriod(today)
+  
+  // Generate periods going back
+  for (let i = monthsBack; i >= 0; i--) {
+    const targetDate = subMonths(today, i)
+    const year = targetDate.getFullYear()
+    const month = targetDate.getMonth()
+    
+    // First half of month (1-15)
+    const firstHalf = {
+      start: new Date(year, month, 1),
+      end: new Date(year, month, 15, 23, 59, 59, 999)
+    }
+    
+    // Second half of month (16-EOM)
+    const lastDay = endOfMonth(targetDate)
+    const secondHalf = {
+      start: new Date(year, month, 16),
+      end: new Date(year, month, lastDay.getDate(), 23, 59, 59, 999)
+    }
+    
+    // Add first half
+    const isCurrentFirst = firstHalf.start.getTime() === currentPeriod.start.getTime()
+    periods.push({
+      ...firstHalf,
+      label: `${format(firstHalf.start, 'MMM dd')} - ${format(firstHalf.end, 'MMM dd, yyyy')}`,
+      isCurrent: isCurrentFirst,
+      isPast: firstHalf.end < today && !isCurrentFirst,
+      isFuture: firstHalf.start > today && !isCurrentFirst
+    })
+    
+    // Add second half
+    const isCurrentSecond = secondHalf.start.getTime() === currentPeriod.start.getTime()
+    periods.push({
+      ...secondHalf,
+      label: `${format(secondHalf.start, 'MMM dd')} - ${format(secondHalf.end, 'MMM dd, yyyy')}`,
+      isCurrent: isCurrentSecond,
+      isPast: secondHalf.end < today && !isCurrentSecond,
+      isFuture: secondHalf.start > today && !isCurrentSecond
+    })
+  }
+  
+  // Generate future periods
+  for (let i = 1; i <= monthsForward; i++) {
+    const targetDate = addMonths(today, i)
+    const year = targetDate.getFullYear()
+    const month = targetDate.getMonth()
+    
+    // First half of month (1-15)
+    const firstHalf = {
+      start: new Date(year, month, 1),
+      end: new Date(year, month, 15, 23, 59, 59, 999)
+    }
+    
+    // Second half of month (16-EOM)
+    const lastDay = endOfMonth(targetDate)
+    const secondHalf = {
+      start: new Date(year, month, 16),
+      end: new Date(year, month, lastDay.getDate(), 23, 59, 59, 999)
+    }
+    
+    // Add first half
+    periods.push({
+      ...firstHalf,
+      label: `${format(firstHalf.start, 'MMM dd')} - ${format(firstHalf.end, 'MMM dd, yyyy')}`,
+      isCurrent: false,
+      isPast: false,
+      isFuture: true
+    })
+    
+    // Add second half
+    periods.push({
+      ...secondHalf,
+      label: `${format(secondHalf.start, 'MMM dd')} - ${format(secondHalf.end, 'MMM dd, yyyy')}`,
+      isCurrent: false,
+      isPast: false,
+      isFuture: true
+    })
+  }
+  
+  // Sort by start date and remove duplicates
+  return periods
+    .filter((period, index, self) => 
+      index === self.findIndex(p => p.start.getTime() === period.start.getTime())
+    )
+    .sort((a, b) => a.start.getTime() - b.start.getTime())
+}
+
+export function formatPayPeriodLabel(start: Date, end: Date): string {
+  return `${format(start, 'MMM dd')} - ${format(end, 'MMM dd, yyyy')}`
 }
 
 // Settings utilities

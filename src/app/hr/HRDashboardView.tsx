@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'react-toastify'
 import { apiClient } from '@/lib/api-client'
-import { Role } from '@prisma/client'
+import { useRouter } from 'next/navigation'
 import { 
   Users, 
   FileText, 
@@ -57,6 +57,7 @@ type TabType = 'approvals' | 'users' | 'reports' | 'settings' | 'messages'
 
 export default function HRDashboardView() {
   const { user } = useAuth()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<TabType>('approvals')
   const [pendingApprovals, setPendingApprovals] = useState<PendingTimesheet[]>([])
   const [users, setUsers] = useState<User[]>([])
@@ -114,28 +115,9 @@ export default function HRDashboardView() {
     }
   }
 
-  const handleApprove = async (timesheetId: string) => {
-    try {
-      await apiClient.post(`/api/timesheet/${timesheetId}/hr-approve`, { 
-        signature: 'HR_DIGITAL_SIGNATURE' 
-      })
-      toast.success('Timesheet approved successfully')
-      fetchData()
-    } catch (error) {
-      console.error('Error approving timesheet:', error)
-      toast.error('Failed to approve timesheet')
-    }
-  }
-
-  const handleDeny = async (timesheetId: string, note: string) => {
-    try {
-      await apiClient.post(`/api/timesheet/${timesheetId}/hr-deny`, { note })
-      toast.success('Timesheet denied and returned to staff')
-      fetchData()
-    } catch (error) {
-      console.error('Error denying timesheet:', error)
-      toast.error('Failed to deny timesheet')
-    }
+  const handleTimesheetClick = (timesheetId: string) => {
+    // Navigate to timesheet in the same tab for better UX
+    router.push(`/hr/timesheet/${timesheetId}`)
   }
 
   const handleAddUser = async (e: React.FormEvent) => {
@@ -399,7 +381,15 @@ export default function HRDashboardView() {
                 ) : (
                   <div className="space-y-4">
                     {pendingApprovals.map((timesheet) => (
-                      <div key={timesheet.id} className="border border-gray-200 rounded-lg p-4">
+                      <div 
+                        key={timesheet.id} 
+                        className="border border-gray-200 rounded-lg p-4 hover:border-primary-300 hover:bg-primary-50 cursor-pointer transition-all duration-200"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleTimesheetClick(timesheet.id)
+                        }}
+                      >
                         <div className="flex items-center justify-between">
                           <div>
                             <h3 className="font-medium text-gray-900">{timesheet.user.name}</h3>
@@ -408,25 +398,13 @@ export default function HRDashboardView() {
                               Period: {new Date(timesheet.periodStart).toLocaleDateString()} - {new Date(timesheet.periodEnd).toLocaleDateString()}
                             </p>
                             <p className="text-sm text-gray-600">Total Hours: {timesheet.totalHours}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Submitted: {new Date(timesheet.updatedAt).toLocaleString()}
+                            </p>
                           </div>
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleApprove(timesheet.id)}
-                              className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1 inline" />
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => {
-                                const note = prompt('Enter reason for denial:')
-                                if (note) handleDeny(timesheet.id, note)
-                              }}
-                              className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                            >
-                              <XCircle className="w-4 h-4 mr-1 inline" />
-                              Deny
-                            </button>
+                          <div className="flex items-center">
+                            <Eye className="w-5 h-5 text-gray-400" />
+                            <span className="ml-2 text-sm text-gray-500">Click to review</span>
                           </div>
                         </div>
                       </div>
@@ -516,7 +494,7 @@ export default function HRDashboardView() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <div className="flex space-x-2">
                                 <button 
-                                  onClick={() => window.open(`/hr/users/${user.id}`, '_blank')}
+                                  onClick={() => window.open(`/hr/users/${user.id}/metrics`, '_blank')}
                                   className="text-purple-600 hover:text-purple-900"
                                   title="View Metrics"
                                 >

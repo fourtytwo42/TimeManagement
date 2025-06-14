@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
 import { prisma } from '@/lib/db'
-import { Role, UserStatus } from '@prisma/client'
+
+// Local constants to replace Prisma enums
+const ROLES = {
+  HR: 'HR',
+  ADMIN: 'ADMIN',
+  STAFF: 'STAFF',
+  MANAGER: 'MANAGER'
+} as const
 import bcrypt from 'bcryptjs'
 
 export async function GET(request: NextRequest) {
@@ -19,7 +26,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    if (user.role !== Role.HR && user.role !== Role.ADMIN) {
+    if (user.role !== 'HR' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -29,7 +36,6 @@ export async function GET(request: NextRequest) {
         email: true,
         name: true,
         role: true,
-        status: true,
         managerId: true,
         payRate: true,
         createdAt: true,
@@ -69,7 +75,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    if (user.role !== Role.HR && user.role !== Role.ADMIN) {
+    if (user.role !== 'HR' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -94,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate role
-    if (!Object.values(Role).includes(role)) {
+    if (!Object.values(ROLES).includes(role)) {
       return NextResponse.json(
         { error: 'Invalid role' },
         { status: 400 }
@@ -133,7 +139,6 @@ export async function POST(request: NextRequest) {
         managerId: managerId || null,
         payRate: parseFloat(payRate),
         password: hashedPassword,
-        status: UserStatus.ACTIVE,
         settings: JSON.stringify({ emailNotifications: false })
       },
       select: {
@@ -141,7 +146,6 @@ export async function POST(request: NextRequest) {
         email: true,
         name: true,
         role: true,
-        status: true,
         managerId: true,
         payRate: true,
         createdAt: true
@@ -173,12 +177,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    if (user.role !== Role.HR && user.role !== Role.ADMIN) {
+    if (user.role !== 'HR' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const body = await request.json()
-    const { id, email, name, role, status, managerId, payRate, password } = body
+    const { id, email, name, role, managerId, payRate, password } = body
 
     if (!id) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
@@ -220,20 +224,14 @@ export async function PUT(request: NextRequest) {
     }
 
     // Validate role if provided
-    if (role && !Object.values(Role).includes(role)) {
+    if (role && !Object.values(ROLES).includes(role)) {
       return NextResponse.json(
         { error: 'Invalid role' },
         { status: 400 }
       )
     }
 
-    // Validate status if provided
-    if (status && !Object.values(UserStatus).includes(status)) {
-      return NextResponse.json(
-        { error: 'Invalid status' },
-        { status: 400 }
-      )
-    }
+    // Status field removed from schema
 
     // Validate pay rate if provided
     if (payRate !== undefined && (isNaN(payRate) || payRate < 0)) {
@@ -248,7 +246,6 @@ export async function PUT(request: NextRequest) {
     if (email) updateData.email = email
     if (name) updateData.name = name
     if (role) updateData.role = role
-    if (status) updateData.status = status
     if (managerId !== undefined) updateData.managerId = managerId || null
     if (payRate !== undefined) updateData.payRate = parseFloat(payRate)
     
@@ -266,7 +263,6 @@ export async function PUT(request: NextRequest) {
         email: true,
         name: true,
         role: true,
-        status: true,
         managerId: true,
         payRate: true,
         createdAt: true,
@@ -303,7 +299,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    if (user.role !== Role.HR && user.role !== Role.ADMIN) {
+    if (user.role !== 'HR' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

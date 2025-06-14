@@ -139,10 +139,13 @@ src/
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@tms.com | admin123 |
-| HR | hr@tms.com | hr123 |
-| Manager | manager@tms.com | manager123 |
-| Staff | staff@tms.com | staff123 |
+| HR/Admin | hr@company.com | password123 |
+| Manager | manager@company.com | password123 |
+| Staff | alice@company.com | password123 |
+| Staff | bob@company.com | password123 |
+| Staff | carol@company.com | password123 |
+
+**Note:** Bob has a denied timesheet with manager feedback for testing the denial workflow.
 
 ## 📋 User Workflows
 

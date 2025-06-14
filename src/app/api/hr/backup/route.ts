@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
-import { Role } from '@prisma/client'
+
+// Local constants to replace Prisma enums
+const ROLES = {
+  HR: 'HR',
+  ADMIN: 'ADMIN'
+} as const
 import { createBackup, listBackups, getBackupStats, validateBackup, restoreBackup } from '@/lib/backup'
 
 export async function POST(request: NextRequest) {
@@ -18,7 +23,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    if (user.role !== Role.HR && user.role !== Role.ADMIN) {
+    if (user.role !== 'HR' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -98,7 +103,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    if (user.role !== Role.HR && user.role !== Role.ADMIN) {
+    if (user.role !== 'HR' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

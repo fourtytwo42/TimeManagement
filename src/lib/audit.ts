@@ -1,5 +1,14 @@
 import { prisma } from '@/lib/db'
-import { Role } from '@prisma/client'
+
+// Local constants to replace Prisma enums
+const ROLES = {
+  STAFF: 'STAFF',
+  MANAGER: 'MANAGER',
+  HR: 'HR',
+  ADMIN: 'ADMIN'
+} as const
+
+type Role = typeof ROLES[keyof typeof ROLES]
 
 export interface AuditLogEntry {
   id?: string

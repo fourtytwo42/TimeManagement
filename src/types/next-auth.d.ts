@@ -1,5 +1,7 @@
-import { Role } from "@prisma/client"
 import NextAuth from "next-auth"
+
+// Local type definition to replace Prisma enum
+type Role = 'STAFF' | 'MANAGER' | 'HR' | 'ADMIN'
 
 declare module "next-auth" {
   interface Session {

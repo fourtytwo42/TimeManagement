@@ -51,7 +51,7 @@ class MailerService {
 
       // Check if email is configured
       if (config.host && config.auth.user && config.auth.pass) {
-        this.transporter = nodemailer.createTransporter(config)
+        this.transporter = nodemailer.createTransport(config)
         this.isEnabled = true
         console.log('Email service initialized successfully')
       } else {

@@ -1,10 +1,19 @@
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import { prisma } from './db'
-import { Role, UserStatus } from '@prisma/client'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key'
+const JWT_SECRET = process.env.JWT_SECRET || 'development-jwt-secret-key-12345'
 const JWT_EXPIRES_IN = '7d'
+
+// Local constants to replace Prisma enums
+const ROLES = {
+  STAFF: 'STAFF',
+  MANAGER: 'MANAGER',
+  HR: 'HR',
+  ADMIN: 'ADMIN'
+} as const
+
+type Role = typeof ROLES[keyof typeof ROLES]
 
 export interface AuthUser {
   id: string
@@ -68,7 +77,6 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
         email: true,
         name: true,
         role: true,
-        status: true,
         password: true
       }
     })
@@ -77,22 +85,6 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
       return {
         success: false,
         error: 'Invalid email or password'
-      }
-    }
-
-    // Check if user is suspended
-    if (user.status === UserStatus.SUSPENDED) {
-      return {
-        success: false,
-        error: 'Your account has been suspended. Please contact HR for assistance.'
-      }
-    }
-
-    // Check if user is inactive
-    if (user.status === UserStatus.INACTIVE) {
-      return {
-        success: false,
-        error: 'Your account is inactive. Please contact HR for assistance.'
       }
     }
 
@@ -146,12 +138,11 @@ export async function getUserById(id: string): Promise<AuthUser | null> {
         id: true,
         email: true,
         name: true,
-        role: true,
-        status: true
+        role: true
       }
     })
 
-    if (!user || user.status !== UserStatus.ACTIVE) {
+    if (!user) {
       return null
     }
 

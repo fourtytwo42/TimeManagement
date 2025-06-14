@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
 import { format } from 'date-fns'
-import { TsState } from '@prisma/client'
 import TimesheetGrid from '@/components/TimesheetGrid'
 import TimesheetComments from '@/components/TimesheetComments'
 import SignatureModal from '@/components/SignatureModal'
@@ -37,13 +36,24 @@ export default function ManagerApprovalsView() {
     }
   }
 
-  const handleApprove = (timesheet: TimesheetWithEntries) => {
-    setSelectedTimesheet(timesheet)
+  const handleTimesheetClick = async (timesheet: TimesheetWithEntries) => {
+    try {
+      // Fetch the full timesheet data with all entries
+      const fullTimesheet = await apiClient.get(`/api/timesheet/${timesheet.id}`)
+      setSelectedTimesheet(fullTimesheet)
+    } catch (error) {
+      console.error('Error fetching timesheet details:', error)
+      toast.error('Failed to load timesheet details')
+    }
+  }
+
+  const handleApprove = () => {
+    if (!selectedTimesheet) return
     setShowApprovalModal(true)
   }
 
-  const handleDeny = (timesheet: TimesheetWithEntries) => {
-    setSelectedTimesheet(timesheet)
+  const handleDeny = () => {
+    if (!selectedTimesheet) return
     setDenialNote('')
     setShowDenialModal(true)
   }
@@ -57,6 +67,7 @@ export default function ManagerApprovalsView() {
       toast.success('Timesheet approved successfully!')
       await fetchPendingApprovals()
       setSelectedTimesheet(null)
+      setShowApprovalModal(false)
     } catch (error) {
       console.error('Error approving timesheet:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to approve timesheet')
@@ -117,105 +128,98 @@ export default function ManagerApprovalsView() {
   return (
     <div className="space-y-6">
       {/* Pending Approvals List */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Pending Approvals ({pendingTimesheets.length})
-          </h2>
-        </div>
-        
-        <div className="divide-y divide-gray-200">
-          {pendingTimesheets.map((timesheet) => {
-            const totalHours = calculatePeriodTotal(timesheet.entries)
-            
-            return (
-              <div key={timesheet.id} className="p-6 hover:bg-gray-50">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-4">
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">
-                          {timesheet.user.name}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {timesheet.user.email}
-                        </p>
+      {!selectedTimesheet && (
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Pending Approvals ({pendingTimesheets.length})
+            </h2>
+          </div>
+          
+          <div className="divide-y divide-gray-200">
+            {pendingTimesheets.map((timesheet) => {
+              const totalHours = calculatePeriodTotal(timesheet.entries)
+              
+              return (
+                <div 
+                  key={timesheet.id} 
+                  className="p-6 hover:bg-gray-50 cursor-pointer transition-colors"
+                  onClick={() => handleTimesheetClick(timesheet)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-4">
+                        <div>
+                          <h3 className="text-lg font-medium text-gray-900">
+                            {timesheet.user.name}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {timesheet.user.email}
+                          </p>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          <div>
+                            Pay Period: {format(timesheet.periodStart, 'MMM d')} - {format(timesheet.periodEnd, 'MMM d, yyyy')}
+                          </div>
+                          <div>
+                            Total Hours: <span className="font-medium">{totalHours.toFixed(2)}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600">
-                        <div>
-                          Pay Period: {format(timesheet.periodStart, 'MMM d')} - {format(timesheet.periodEnd, 'MMM d, yyyy')}
-                        </div>
-                        <div>
-                          Total Hours: <span className="font-medium">{totalHours.toFixed(2)}</span>
-                        </div>
+                      <div className="mt-2 text-xs text-gray-500">
+                        Submitted: {format(new Date(timesheet.updatedAt), 'MMM d, yyyy h:mm a')}
                       </div>
                     </div>
-                    <div className="mt-2 text-xs text-gray-500">
-                      Submitted: {format(new Date(timesheet.updatedAt), 'MMM d, yyyy h:mm a')}
+                    
+                    <div className="text-gray-400">
+                      <span className="text-sm">Click to review →</span>
                     </div>
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setSelectedTimesheet(timesheet)}
-                      disabled={processing}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-                    >
-                      View
-                    </button>
-                    <button
-                      onClick={() => handleDeny(timesheet)}
-                      disabled={processing}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-                    >
-                      Deny
-                    </button>
-                    <button
-                      onClick={() => handleApprove(timesheet)}
-                      disabled={processing}
-                      className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-                    >
-                      Approve
-                    </button>
                   </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Timesheet Detail View */}
       {selectedTimesheet && (
         <div className="space-y-4">
+          {/* Review Header with Actions */}
           <div className="bg-white shadow rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Review Timesheet - {selectedTimesheet.user.name}
-              </h3>
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => handleDeny(selectedTimesheet)}
-                  disabled={processing}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-                >
-                  Deny
-                </button>
-                <button
-                  onClick={() => handleApprove(selectedTimesheet)}
-                  disabled={processing}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-                >
-                  Sign & Approve
-                </button>
-                <button
-                  onClick={() => setSelectedTimesheet(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <span className="sr-only">Close</span>
-                  ✕
-                </button>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Review Timesheet - {selectedTimesheet.user.name}
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Pay Period: {format(selectedTimesheet.periodStart, 'MMM d')} - {format(selectedTimesheet.periodEnd, 'MMM d, yyyy')}
+                </p>
               </div>
+              <button
+                onClick={() => setSelectedTimesheet(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex items-center space-x-3 pt-4 border-t border-gray-200">
+              <button
+                onClick={handleDeny}
+                disabled={processing}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+              >
+                Deny
+              </button>
+              <button
+                onClick={handleApprove}
+                disabled={processing}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+              >
+                Sign & Approve
+              </button>
             </div>
           </div>
           
@@ -227,6 +231,10 @@ export default function ManagerApprovalsView() {
           <TimesheetComments 
             timesheetId={selectedTimesheet.id}
             readOnly={false}
+            timesheet={{
+              state: selectedTimesheet.state,
+              managerNote: selectedTimesheet.managerNote
+            }}
           />
         </div>
       )}
@@ -234,10 +242,7 @@ export default function ManagerApprovalsView() {
       {/* Approval Signature Modal */}
       <SignatureModal
         isOpen={showApprovalModal}
-        onClose={() => {
-          setShowApprovalModal(false)
-          setSelectedTimesheet(null)
-        }}
+        onClose={() => setShowApprovalModal(false)}
         onSave={handleApprovalSubmit}
         title="Approve Timesheet"
         description={`Please provide your digital signature to approve ${selectedTimesheet?.user.name}'s timesheet.`}

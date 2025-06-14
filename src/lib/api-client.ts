@@ -27,15 +27,39 @@ class ApiClient {
     url: string, 
     options: ApiRequestOptions = {}
   ): Promise<T> {
-    const { requireAuth = true, headers = {}, ...restOptions } = options
+    const { requireAuth = true, headers = {}, body, ...restOptions } = options
 
     const requestHeaders = requireAuth 
       ? { ...this.getAuthHeaders(), ...headers }
       : { 'Content-Type': 'application/json', ...headers }
 
+    // Validate and prepare request body
+    let requestBody: string | undefined
+    if (body !== undefined) {
+      if (typeof body === 'string') {
+        // If body is already a string, validate it's valid JSON
+        try {
+          JSON.parse(body)
+          requestBody = body
+        } catch (error) {
+          console.error('Invalid JSON string provided as body:', body)
+          throw new Error('Request body must be valid JSON')
+        }
+      } else {
+        // Convert object to JSON string
+        try {
+          requestBody = JSON.stringify(body)
+        } catch (error) {
+          console.error('Failed to stringify request body:', body)
+          throw new Error('Request body cannot be serialized to JSON')
+        }
+      }
+    }
+
     const response = await fetch(url, {
       ...restOptions,
       headers: requestHeaders,
+      body: requestBody,
     })
 
     if (!response.ok) {
@@ -49,11 +73,28 @@ class ApiClient {
         throw new Error('Authentication required')
       }
       
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.error || `HTTP ${response.status}`)
+      // Try to parse error response
+      let errorData
+      try {
+        const errorText = await response.text()
+        if (errorText) {
+          errorData = JSON.parse(errorText)
+        }
+      } catch (parseError) {
+        console.error('Failed to parse error response')
+      }
+      
+      const errorMessage = errorData?.error || `HTTP ${response.status}: ${response.statusText}`
+      throw new Error(errorMessage)
     }
 
-    return response.json()
+    // Parse response JSON with error handling
+    try {
+      return await response.json()
+    } catch (parseError) {
+      console.error('Failed to parse response JSON:', parseError)
+      throw new Error('Invalid JSON response from server')
+    }
   }
 
   // Convenience methods
@@ -63,30 +104,33 @@ class ApiClient {
 
   async post<T = any>(url: string, data?: any, options?: ApiRequestOptions): Promise<T> {
     return this.request<T>(url, {
-      ...options,
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data,
+      ...options,
     })
   }
 
   async patch<T = any>(url: string, data?: any, options?: ApiRequestOptions): Promise<T> {
     return this.request<T>(url, {
-      ...options,
       method: 'PATCH',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data,
+      ...options,
     })
   }
 
   async put<T = any>(url: string, data?: any, options?: ApiRequestOptions): Promise<T> {
     return this.request<T>(url, {
-      ...options,
       method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data,
+      ...options,
     })
   }
 
   async delete<T = any>(url: string, options?: ApiRequestOptions): Promise<T> {
-    return this.request<T>(url, { ...options, method: 'DELETE' })
+    return this.request<T>(url, {
+      method: 'DELETE',
+      ...options,
+    })
   }
 }
 

@@ -49,10 +49,11 @@ export default function SignInPage() {
   }
 
   const demoAccounts = [
-    { role: 'Admin', email: 'admin@tms.com', password: 'admin123', color: 'text-red-600' },
-    { role: 'HR', email: 'hr@tms.com', password: 'hr123', color: 'text-purple-600' },
-    { role: 'Manager', email: 'manager@tms.com', password: 'manager123', color: 'text-blue-600' },
-    { role: 'Staff', email: 'staff@tms.com', password: 'staff123', color: 'text-green-600' },
+    { role: 'HR Admin', email: 'hr@company.com', password: 'password123', color: 'text-purple-600' },
+    { role: 'Manager', email: 'manager@company.com', password: 'password123', color: 'text-blue-600' },
+    { role: 'Staff (Alice)', email: 'alice@company.com', password: 'password123', color: 'text-green-600' },
+    { role: 'Staff (Bob)', email: 'bob@company.com', password: 'password123', color: 'text-orange-600' },
+    { role: 'Staff (Carol)', email: 'carol@company.com', password: 'password123', color: 'text-teal-600' },
   ]
 
   const fillDemoAccount = (email: string, password: string) => {
@@ -186,8 +187,13 @@ export default function SignInPage() {
           </div>
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
             <p className="text-xs text-gray-600 text-center">
-              All demo accounts use the password format: <code className="bg-gray-200 px-1 rounded">[role]123</code>
+              All demo accounts use the same password: <code className="bg-gray-200 px-1 rounded">password123</code>
             </p>
+            <div className="mt-2 text-xs text-gray-500 text-center">
+              <p><strong>Bob</strong> has a denied timesheet with manager feedback</p>
+              <p><strong>Alice</strong> has a timesheet pending manager approval</p>
+              <p><strong>Carol</strong> has a timesheet pending HR approval</p>
+            </div>
           </div>
         </div>
 

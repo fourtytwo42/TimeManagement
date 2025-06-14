@@ -23,7 +23,6 @@ interface Message {
   content: string
   isRead: boolean
   createdAt: string
-  parentId?: string | null
   sender: {
     id: string
     name: string
@@ -34,10 +33,6 @@ interface Message {
     name: string
     email: string
   }
-  replies?: Array<{
-    id: string
-    createdAt: string
-  }>
 }
 
 interface User {
@@ -162,8 +157,7 @@ export default function MessagesPage() {
       await apiClient.post('/api/messages', {
         receiverId: selectedMessage.sender.id,
         subject: replyForm.subject,
-        content: replyForm.content,
-        parentId: selectedMessage.parentId || selectedMessage.id // Reply to the root message
+        content: replyForm.content
       })
       toast.success('Reply sent successfully')
       setShowReply(false)
@@ -287,9 +281,11 @@ export default function MessagesPage() {
                               <p className="text-sm text-gray-500 truncate mt-1">
                                 {message.content}
                               </p>
-                              <p className="text-xs text-gray-400 mt-2">
-                                {new Date(message.createdAt).toLocaleDateString()}
-                              </p>
+                              <div className="flex items-center justify-between mt-2">
+                                <p className="text-xs text-gray-400">
+                                  {new Date(message.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
                             </div>
                             {!message.isRead && activeTab === 'inbox' && (
                               <div className="w-2 h-2 bg-blue-500 rounded-full ml-2 mt-1"></div>

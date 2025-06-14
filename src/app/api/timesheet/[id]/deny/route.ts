@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
 import { denyTimesheet } from '@/lib/timesheet'
-import { Role } from '@prisma/client'
 
 export async function POST(
   request: NextRequest,
@@ -21,7 +20,7 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    if (user.role !== Role.MANAGER) {
+    if (user.role !== 'MANAGER') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

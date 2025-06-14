@@ -3,7 +3,6 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { Role } from '@prisma/client'
 import StaffTimesheetView from './StaffTimesheetView'
 import { Clock, Calendar, User, CheckCircle } from 'lucide-react'
 
@@ -18,7 +17,7 @@ export default function StaffDashboard() {
         return
       }
 
-      if (user?.role !== Role.STAFF) {
+      if (user?.role !== 'STAFF') {
         router.push('/')
         return
       }
@@ -33,7 +32,7 @@ export default function StaffDashboard() {
     )
   }
 
-  if (!isAuthenticated || !user || user.role !== Role.STAFF) {
+  if (!isAuthenticated || !user || user.role !== 'STAFF') {
     return null
   }
 

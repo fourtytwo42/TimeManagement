@@ -22,7 +22,6 @@ import {
   Mail,
   Printer
 } from 'lucide-react'
-import { Role } from '@prisma/client'
 
 interface UserMetrics {
   user: {
@@ -85,14 +84,15 @@ export default function UserMetricsPage() {
   const [timeRange, setTimeRange] = useState('12') // months
 
   useEffect(() => {
-    if (user?.role !== Role.HR && user?.role !== Role.ADMIN) {
+    if (user?.role !== 'HR' && user?.role !== 'ADMIN') {
       router.push('/hr')
       return
     }
     fetchMetrics()
-  }, [timeRange, params.id])
+  }, [timeRange, params?.id])
 
   const fetchMetrics = async () => {
+    if (!params?.id) return
     setLoading(true)
     try {
       const data = await apiClient.get(`/api/hr/users/${params.id}/metrics?months=${timeRange}`)

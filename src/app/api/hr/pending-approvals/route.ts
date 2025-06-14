@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
 import { prisma } from '@/lib/db'
-import { Role, TsState } from '@prisma/client'
+
+// Local constants to replace Prisma enums
+const ROLES = {
+  HR: 'HR',
+  ADMIN: 'ADMIN'
+} as const
+
+const TS_STATE = {
+  PENDING_HR: 'PENDING_HR'
+} as const
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,13 +27,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    if (user.role !== Role.HR && user.role !== Role.ADMIN) {
+    if (user.role !== 'HR' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const pendingTimesheets = await prisma.timesheet.findMany({
       where: {
-        state: TsState.PENDING_HR
+        state: TS_STATE.PENDING_HR
       },
       include: {
         user: {

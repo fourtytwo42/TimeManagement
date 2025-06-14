@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { AuthUser } from '@/lib/jwt-auth'
-import { Role } from '@prisma/client'
 
 interface AuthContextType {
   user: AuthUser | null
@@ -72,13 +71,50 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setIsLoading(true)
       
+      // Validate inputs before sending
+      if (!email || !password) {
+        return { success: false, error: 'Email and password are required' }
+      }
+
+      if (typeof email !== 'string' || typeof password !== 'string') {
+        return { success: false, error: 'Email and password must be strings' }
+      }
+
+      const trimmedEmail = email.trim()
+      if (!trimmedEmail) {
+        return { success: false, error: 'Email cannot be empty' }
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(trimmedEmail)) {
+        return { success: false, error: 'Please enter a valid email address' }
+      }
+
+      const requestBody = JSON.stringify({ 
+        email: trimmedEmail.toLowerCase(), 
+        password: password 
+      })
+      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: requestBody,
       })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        let errorData
+        try {
+          errorData = JSON.parse(errorText)
+        } catch {
+          console.error('Failed to parse error response:', errorText)
+          return { success: false, error: `Server error: ${response.status}` }
+        }
+        return { success: false, error: errorData.error || 'Login failed' }
+      }
 
       const data = await response.json()
 
@@ -97,7 +133,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     } catch (error) {
       console.error('Login error:', error)
-      return { success: false, error: 'Network error occurred' }
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        return { success: false, error: 'Network connection error. Please check your internet connection.' }
+      }
+      return { success: false, error: 'An unexpected error occurred. Please try again.' }
     } finally {
       setIsLoading(false)
     }

@@ -1,5 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// This is your Prisma schema file.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
@@ -7,200 +7,114 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
-}
-
-enum Role {
-  STAFF
-  MANAGER
-  HR
-  ADMIN
-}
-
-enum TsState {
-  PENDING_STAFF
-  PENDING_MANAGER
-  PENDING_HR
-  APPROVED
-}
-
-enum UserStatus {
-  ACTIVE
-  SUSPENDED
-  INACTIVE
-}
-
-enum AuditAction {
-  CREATE
-  UPDATE
-  DELETE
-  LOGIN
-  LOGOUT
-  SUBMIT
-  APPROVE
-  DENY
-  MESSAGE_SEND
-  BACKUP_CREATE
-  EXPORT
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url      = "file:./dev.db"
 }
 
 model User {
-  id                String              @id @default(cuid())
-  email             String              @unique
-  password          String
-  name              String
-  role              Role                @default(STAFF)
-  status            UserStatus          @default(ACTIVE)
-  managerId         String?
-  payRate           Float               @default(0)
-  settings          String              @default("{}")
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      String   // 'STAFF', 'MANAGER', 'HR', 'ADMIN'
+  password  String
+  payRate   Float    @default(0.0)
+  managerId String?
+  settings  String   @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  accounts          Account[]
-  sessions          Session[]
-  manager           User?               @relation("UserManager", fields: [managerId], references: [id])
-  directReports     User[]              @relation("UserManager")
+  manager           User?         @relation("UserManager", fields: [managerId], references: [id])
+  directReports     User[]        @relation("UserManager")
   timesheets        Timesheet[]
+  sentMessages      Message[]     @relation("MessageSender")
+  receivedMessages  Message[]     @relation("MessageReceiver")
   timesheetMessages TimesheetMessage[]
-  sentMessages      Message[]           @relation("SentMessages")
-  receivedMessages  Message[]           @relation("ReceivedMessages")
   auditLogs         AuditLog[]
-  notifications     Notification[]
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
 }
 
 model Timesheet {
-  id            String               @id @default(cuid())
-  user          User                 @relation(fields: [userId], references: [id])
-  userId        String
-  periodStart   DateTime
-  periodEnd     DateTime
-  state         TsState              @default(PENDING_STAFF)
-  entries       TimesheetEntry[]     
-  staffSig      String?              
-  managerSig    String?
-  hrSig         String?
-  managerNote   String?
-  messages      TimesheetMessage[]   
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  id           String   @id @default(cuid())
+  userId       String
+  periodStart  DateTime
+  periodEnd    DateTime
+  state        String   @default("PENDING_STAFF") // 'PENDING_STAFF', 'PENDING_MANAGER', 'PENDING_HR', 'APPROVED'
+  staffSig     String?
+  staffSigAt   DateTime?
+  managerSig   String?
+  managerSigAt DateTime?
+  hrSig        String?
+  hrSigAt      DateTime?
+  managerNote  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  @@unique([userId, periodStart])
+  // Relations
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries  TimesheetEntry[]
+  messages TimesheetMessage[]
+
+  @@unique([userId, periodStart, periodEnd])
 }
 
 model TimesheetEntry {
-  id           String    @id @default(cuid())
-  timesheet    Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
-  timesheetId  String
-  date         DateTime
-  in1          DateTime?
-  out1         DateTime?
-  in2          DateTime?
-  out2         DateTime?
-  in3          DateTime?
-  out3         DateTime?
-  plawaHours   Float     @default(0)
-  comments     String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  timesheetId String
+  date        DateTime
+  in1         DateTime?
+  out1        DateTime?
+  in2         DateTime?
+  out2        DateTime?
+  in3         DateTime?
+  out3        DateTime?
+  plawaHours  Float     @default(0.0)
+  comments    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  timesheet Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
 
   @@unique([timesheetId, date])
 }
 
-model TimesheetMessage {
-  id           String    @id @default(cuid())
-  timesheet    Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
-  timesheetId  String
-  sender       User      @relation(fields: [senderId], references: [id])
-  senderId     String
-  content      String
-  createdAt    DateTime  @default(now())
-}
-
 model Message {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   senderId   String
   receiverId String
-  parentId   String?  // For threading replies
   subject    String
   content    String
-  isRead     Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  isRead     Boolean   @default(false)
   readAt     DateTime?
+  createdAt  DateTime  @default(now())
 
-  sender   User @relation("SentMessages", fields: [senderId], references: [id])
-  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
-  parent   Message? @relation("MessageReplies", fields: [parentId], references: [id])
-  replies  Message[] @relation("MessageReplies")
+  // Relations
+  sender   User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+}
+
+model TimesheetMessage {
+  id          String   @id @default(cuid())
+  timesheetId String
+  senderId    String
+  content     String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  timesheet Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  sender    User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {
-  id           String      @id @default(cuid())
-  user         User        @relation(fields: [userId], references: [id])
-  userId       String
-  action       AuditAction
-  resource     String      // e.g., "timesheet", "user", "message"
-  resourceId   String?     // ID of the affected resource
-  details      String?     // JSON string with additional details
-  ipAddress    String?
-  userAgent    String?
-  createdAt    DateTime    @default(now())
-}
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  resource   String
+  resourceId String?
+  details    String?  // JSON string
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
 
-model Notification {
-  id           String    @id @default(cuid())
-  user         User      @relation(fields: [userId], references: [id])
-  userId       String
-  type         String    // e.g., "timesheet_message", "approval_required"
-  title        String
-  message      String
-  isRead       Boolean   @default(false)
-  resourceId   String?   // ID of related resource (timesheet, message, etc.)
-  createdAt    DateTime  @default(now())
-  readAt       DateTime?
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
-
-model SystemSettings {
-  id           String    @id @default(cuid())
-  key          String    @unique
-  value        String
-  description  String?
-  updatedAt    DateTime  @updatedAt
-  createdAt    DateTime  @default(now())
-} 

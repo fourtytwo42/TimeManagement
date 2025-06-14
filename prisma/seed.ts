@@ -1,99 +1,96 @@
-import { PrismaClient, Role } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🌱 Seeding database...')
+  console.log('🌱 Starting simple database seed...')
 
-  // Create admin user
-  const adminPassword = await bcrypt.hash('admin123', 12)
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@tms.com' },
-    update: {},
-    create: {
-      email: 'admin@tms.com',
-      name: 'System Administrator',
-      password: adminPassword,
-      role: Role.ADMIN,
-      payRate: 0,
-      settings: JSON.stringify({
-        emailNotifications: false
-      })
+  // Clear existing data
+  console.log('🗑️  Clearing existing data...')
+  await prisma.user.deleteMany()
+
+  // Create users
+  console.log('👥 Creating users...')
+  
+  const hashedPassword = await bcrypt.hash('password123', 12)
+
+  // Create HR Admin
+  const hrUser = await prisma.user.create({
+    data: {
+      email: 'hr@company.com',
+      name: 'HR Admin',
+      role: 'HR',
+      password: hashedPassword,
+      payRate: 25.00,
+      settings: JSON.stringify({ emailNotifications: true })
     }
   })
 
-  console.log('✅ Created admin user:', admin.email)
-
-  // Create HR user
-  const hrPassword = await bcrypt.hash('hr123', 12)
-  const hr = await prisma.user.upsert({
-    where: { email: 'hr@tms.com' },
-    update: {},
-    create: {
-      email: 'hr@tms.com',
-      name: 'HR Manager',
-      password: hrPassword,
-      role: Role.HR,
-      payRate: 75000,
-      settings: JSON.stringify({
-        emailNotifications: false
-      })
+  // Create Manager
+  const managerUser = await prisma.user.create({
+    data: {
+      email: 'manager@company.com',
+      name: 'John Manager',
+      role: 'MANAGER',
+      password: hashedPassword,
+      payRate: 30.00,
+      settings: JSON.stringify({ emailNotifications: true })
     }
   })
 
-  console.log('✅ Created HR user:', hr.email)
-
-  // Create manager user
-  const managerPassword = await bcrypt.hash('manager123', 12)
-  const manager = await prisma.user.upsert({
-    where: { email: 'manager@tms.com' },
-    update: {},
-    create: {
-      email: 'manager@tms.com',
-      name: 'Department Manager',
-      password: managerPassword,
-      role: Role.MANAGER,
-      payRate: 65000,
-      settings: JSON.stringify({
-        emailNotifications: false
-      })
+  // Create Staff Users
+  const aliceUser = await prisma.user.create({
+    data: {
+      email: 'alice@company.com',
+      name: 'Alice Smith',
+      role: 'STAFF',
+      password: hashedPassword,
+      payRate: 18.50,
+      managerId: managerUser.id,
+      settings: JSON.stringify({ emailNotifications: false })
     }
   })
 
-  console.log('✅ Created manager user:', manager.email)
-
-  // Create staff user
-  const staffPassword = await bcrypt.hash('staff123', 12)
-  const staff = await prisma.user.upsert({
-    where: { email: 'staff@tms.com' },
-    update: {},
-    create: {
-      email: 'staff@tms.com',
-      name: 'John Staff',
-      password: staffPassword,
-      role: Role.STAFF,
-      managerId: manager.id,
-      payRate: 45000,
-      settings: JSON.stringify({
-        emailNotifications: false
-      })
+  const bobUser = await prisma.user.create({
+    data: {
+      email: 'bob@company.com',
+      name: 'Bob Johnson',
+      role: 'STAFF',
+      password: hashedPassword,
+      payRate: 20.00,
+      managerId: managerUser.id,
+      settings: JSON.stringify({ emailNotifications: false })
     }
   })
 
-  console.log('✅ Created staff user:', staff.email)
+  const carolUser = await prisma.user.create({
+    data: {
+      email: 'carol@company.com',
+      name: 'Carol Davis',
+      role: 'STAFF',
+      password: hashedPassword,
+      payRate: 19.25,
+      managerId: managerUser.id,
+      settings: JSON.stringify({ emailNotifications: false })
+    }
+  })
 
-  console.log('🎉 Seeding completed!')
-  console.log('\n📋 Login credentials:')
-  console.log('Admin: admin@tms.com / admin123')
-  console.log('HR: hr@tms.com / hr123')
-  console.log('Manager: manager@tms.com / manager123')
-  console.log('Staff: staff@tms.com / staff123')
+  console.log('✅ Database seeded successfully!')
+  console.log('')
+  console.log('📋 Summary:')
+  console.log('👥 Users created:')
+  console.log('   - HR Admin: hr@company.com')
+  console.log('   - Manager: manager@company.com')
+  console.log('   - Staff: alice@company.com, bob@company.com, carol@company.com')
+  console.log('   - Password for all: password123')
+  console.log('')
+  console.log('📋 No timesheets or messages created - clean start!')
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seeding failed:', e)
+    console.error(e)
     process.exit(1)
   })
   .finally(async () => {

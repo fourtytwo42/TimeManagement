@@ -3,7 +3,6 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { Role } from '@prisma/client'
 import ManagerApprovalsView from './ManagerApprovalsView'
 import { CheckCircle, Clock, Users, AlertCircle } from 'lucide-react'
 
@@ -18,7 +17,7 @@ export default function ManagerDashboard() {
         return
       }
 
-      if (user?.role !== Role.MANAGER) {
+      if (user?.role !== 'MANAGER') {
         router.push('/')
         return
       }
@@ -33,7 +32,7 @@ export default function ManagerDashboard() {
     )
   }
 
-  if (!isAuthenticated || !user || user.role !== Role.MANAGER) {
+  if (!isAuthenticated || !user || user.role !== 'MANAGER') {
     return null
   }
 

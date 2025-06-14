@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
 import { prisma } from '@/lib/db'
-import { Role, TsState } from '@prisma/client'
+
+// Local constants to replace Prisma enums
+const TS_STATE = {
+  PENDING_HR: 'PENDING_HR',
+  APPROVED: 'APPROVED'
+} as const
 
 export async function POST(
   request: NextRequest,
@@ -21,7 +26,7 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    if (user.role !== Role.HR && user.role !== Role.ADMIN) {
+    if (user.role !== 'HR' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -40,7 +45,7 @@ export async function POST(
       return NextResponse.json({ error: 'Timesheet not found' }, { status: 404 })
     }
 
-    if (timesheet.state !== TsState.PENDING_HR) {
+    if (timesheet.state !== TS_STATE.PENDING_HR) {
       return NextResponse.json(
         { error: 'Timesheet is not pending HR approval' },
         { status: 400 }
@@ -50,7 +55,7 @@ export async function POST(
     const updatedTimesheet = await prisma.timesheet.update({
       where: { id: params.id },
       data: {
-        state: TsState.APPROVED,
+        state: TS_STATE.APPROVED,
         hrSig: signature,
         updatedAt: new Date()
       }

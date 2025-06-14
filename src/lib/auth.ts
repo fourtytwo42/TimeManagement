@@ -3,7 +3,16 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { prisma } from "./db"
-import { Role } from "@prisma/client"
+
+// Local constants to replace Prisma enums
+const ROLES = {
+  STAFF: 'STAFF',
+  MANAGER: 'MANAGER',
+  HR: 'HR',
+  ADMIN: 'ADMIN'
+} as const
+
+type Role = typeof ROLES[keyof typeof ROLES]
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -91,15 +100,15 @@ export function canAccessTimesheet(
   managerId?: string
 ): boolean {
   // Staff can only access their own timesheets
-  if (userRole === Role.STAFF) {
+  if (userRole === 'STAFF') {
     return userId === timesheetUserId
   }
   
   // Managers can access their direct reports' timesheets
-  if (userRole === Role.MANAGER) {
+  if (userRole === 'MANAGER') {
     return userId === timesheetUserId || userId === managerId
   }
   
   // HR and Admin can access all timesheets
-  return userRole === Role.HR || userRole === Role.ADMIN
+  return userRole === 'HR' || userRole === 'ADMIN'
 } 

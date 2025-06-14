@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
 import { prisma } from '@/lib/db'
-import { Role } from '@prisma/client'
 import { sendTimesheetNotification, isEmailEnabled } from '@/lib/mailer'
+
+// Local constants to replace Prisma enums
+const ROLES = {
+  HR: 'HR',
+  ADMIN: 'ADMIN',
+  STAFF: 'STAFF'
+} as const
 
 export async function GET(
   request: NextRequest,
@@ -43,8 +49,8 @@ export async function GET(
     const canAccess = 
       timesheet.userId === user.id || // Owner
       timesheet.user.managerId === user.id || // Manager
-      user.role === Role.HR || 
-      user.role === Role.ADMIN
+      user.role === 'HR' || 
+      user.role === 'ADMIN'
 
     if (!canAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
@@ -122,8 +128,8 @@ export async function POST(
     const canAccess = 
       timesheet.userId === user.id || // Owner
       timesheet.user.managerId === user.id || // Manager
-      user.role === Role.HR || 
-      user.role === Role.ADMIN
+      user.role === 'HR' || 
+      user.role === 'ADMIN'
 
     if (!canAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
@@ -161,7 +167,7 @@ export async function POST(
         }
 
         // Notify manager if message is from staff
-        if (timesheet.user.managerId && timesheet.user.managerId !== user.id && user.role === Role.STAFF) {
+        if (timesheet.user.managerId && timesheet.user.managerId !== user.id && user.role === 'STAFF') {
           await sendTimesheetNotification({
             userId: timesheet.user.managerId,
             timesheetId: params.id,

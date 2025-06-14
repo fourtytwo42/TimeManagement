@@ -24,24 +24,53 @@ export async function PATCH(
     const body = await request.json()
     const { in1, out1, in2, out2, in3, out3, plawaHours, comments } = body
 
-    // Convert string dates to Date objects
-    const dateFields = {
-      in1: in1 ? new Date(in1) : null,
-      out1: out1 ? new Date(out1) : null,
-      in2: in2 ? new Date(in2) : null,
-      out2: out2 ? new Date(out2) : null,
-      in3: in3 ? new Date(in3) : null,
-      out3: out3 ? new Date(out3) : null,
+    // Only convert and include fields that are actually provided
+    const updateData: any = {}
+    
+    // Handle time fields - only include if they're provided in the request
+    if (in1 !== undefined) {
+      updateData.in1 = in1 ? new Date(in1) : null
+    }
+    if (out1 !== undefined) {
+      updateData.out1 = out1 ? new Date(out1) : null
+    }
+    if (in2 !== undefined) {
+      updateData.in2 = in2 ? new Date(in2) : null
+    }
+    if (out2 !== undefined) {
+      updateData.out2 = out2 ? new Date(out2) : null
+    }
+    if (in3 !== undefined) {
+      updateData.in3 = in3 ? new Date(in3) : null
+    }
+    if (out3 !== undefined) {
+      updateData.out3 = out3 ? new Date(out3) : null
+    }
+    
+    // Handle other fields
+    if (plawaHours !== undefined) {
+      const plawaValidation = validatePlawaHours(plawaHours)
+      if (!plawaValidation.isValid) {
+        return NextResponse.json(
+          { error: plawaValidation.error },
+          { status: 400 }
+        )
+      }
+      updateData.plawaHours = plawaHours
+    }
+    
+    if (comments !== undefined) {
+      updateData.comments = comments
     }
 
-    // Validate time entries
+    // Validate time entries only for the fields being updated
     const timeValidation = validateTimeEntry(
-      dateFields.in1,
-      dateFields.out1,
-      dateFields.in2,
-      dateFields.out2,
-      dateFields.in3,
-      dateFields.out3
+      updateData.in1,
+      updateData.out1,
+      updateData.in2,
+      updateData.out2,
+      updateData.in3,
+      updateData.out3
     )
 
     if (!timeValidation.isValid) {
@@ -51,25 +80,10 @@ export async function PATCH(
       )
     }
 
-    // Validate PLAWA hours
-    if (plawaHours !== undefined) {
-      const plawaValidation = validatePlawaHours(plawaHours)
-      if (!plawaValidation.isValid) {
-        return NextResponse.json(
-          { error: plawaValidation.error },
-          { status: 400 }
-        )
-      }
-    }
-
     const updatedEntry = await updateTimesheetEntry(
       params.id,
       params.entryId,
-      {
-        ...dateFields,
-        plawaHours: plawaHours !== undefined ? plawaHours : undefined,
-        comments: comments !== undefined ? comments : undefined,
-      },
+      updateData,
       user.id
     )
 
