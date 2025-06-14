@@ -1,0 +1,491 @@
+1. Introduction
+This Timesheet Management Service (TMS) is a full-stack web application built with Next.js and SQLite. It supports three user roles—Staff, Manager, and HR/Admin—in a bi-monthly timesheet workflow. Key features include digital signatures, optional email notifications, in-page toast feedback, and a real-time messaging system. The aim is to automate data entry, approval chains, reporting, backups, and communication, while delivering a polished, interactive UI.
+
+2. Objectives
+Automated Pay-Period Creation: Automatically generate timesheet records for each staff member twice per month (1–15 and 16–EOM).
+
+Approval Workflow: Enforce a sequential approval chain—Staff submits → Manager approves/denies → HR finalizes—capturing a digital signature at each step.
+
+Configurable Notifications: Provide optional email notifications at every transition, disabled by default and controllable globally or per user.
+
+Real-Time In-App Feedback: Use toast notifications for all significant events (settings saved, approvals, messages, backups).
+
+Integrated Messaging: Offer both contextual timesheet threads and private 1:1 chats (Staff↔Manager, Staff↔HR, Manager↔HR) with real-time delivery.
+
+Comprehensive Reporting: Allow HR to filter, view, and export timesheet data as CSV or PDF for auditing and payroll.
+
+Resilience & Backups: Schedule and manage database backups via configurable cron jobs and manual triggers, with retention policies.
+
+Engaging UI/UX: Employ modern CSS utilities, accessible components, and smooth animations to make the experience professional and enjoyable.
+
+3. Scope & Roles
+Role	Responsibilities
+Staff	- View a dashboard of current and past pay periods
+- Enter three in/out time pairs and PLAWA hours per day
+- See real-time day and period total hours
+- Digitally sign and submit their timesheet
+- Participate in timesheet-specific chat threads
+Manager	- Receive in-app (and email, if enabled) alerts when direct reports submit
+- Review submitted timesheets and either approve (with signature) or deny (with comment)
+- If denied, route back to staff for corrections
+- Engage in timesheet or private chats with staff/HR
+HR/Admin	- Create and manage user accounts (assign roles, managers, pay rates, emails)
+- Override or edit any timesheet and send it for re-signing
+- Configure global and per-user settings (email toggles, backup frequency, retention)
+- Generate and export reports (CSV/PDF)
+- Trigger manual backups
+- Use both chat channels for communication
+
+4. High-Level User Stories
+Staff: “When I log in, I want to see my current pay-period record auto-generated and a calendar-style grid I can fill out with time entries. I should see my daily and total hours calculated instantly, then sign and submit.”
+
+Manager: “Upon submission by my staff, I want an in-app toast and email (if enabled). I need to read the entry, optionally comment, and then approve with my digital signature—or deny so staff can correct.”
+
+HR: “I want a central settings page where I can disable email notifications by default, enable them per user, schedule nightly backups, and see confirmation toasts when changes are saved.”
+
+All Roles: “I want to chat in real time about a specific timesheet or privately with another user—messages should persist, auto-scroll, and only be visible to participants.”
+
+HR: “I need to filter all timesheets by user, unit, or date range, then export the data as a CSV or PDF for payroll processing.”
+
+5. Technology Stack
+Frontend
+
+Next.js v14 (App Router) with TypeScript for page routing and server-side rendering.
+
+Tailwind CSS + Headless UI for utility-first styling and accessible components.
+
+Framer Motion for subtle animations (modal entrances, list transitions).
+
+react-signature-canvas for capturing staff, manager, and HR signatures as Base64.
+
+react-toastify for global toast notifications.
+
+socket.io-client for real-time messaging.
+
+Backend / API
+
+Next.js API Routes with TypeScript handlers.
+
+NextAuth.js (SQLite adapter) for authentication and session management.
+
+Prisma ORM against SQLite for type-safe database access and migrations.
+
+nodemailer for conditional email notification delivery.
+
+node-cron to schedule automated backups.
+
+Socket.IO server for real-time bidirectional communication.
+
+Database
+
+SQLite file managed in Git (with automated backups).
+
+Process Management & Hosting
+
+Node.js server launch via PM2 or a systemd unit.
+
+Nginx (or Apache) as reverse proxy, SSL termination, and static-asset caching.
+
+Local Tooling
+
+npm scripts:
+
+lint (ESLint)
+
+typecheck (tsc)
+
+test (Jest or your framework of choice)
+
+Husky pre-commit hooks for code formatting (Prettier) and linting.
+
+6. Architecture & File Structure
+bash
+Copy
+Edit
+/src
+ ├─ /app
+ │    ├─ /staff
+ │    │    ├─ page.tsx                   # Dashboard showing active & past periods
+ │    │    └─ /timesheet/[id]
+ │    │         ├─ page.tsx              # Timesheet detail & entry form
+ │    │         └─ MessagesSection.tsx   # Contextual chat for this TS
+ │    ├─ /manager
+ │    │    ├─ page.tsx                   # Pending approvals dashboard
+ │    │    └─ /chat/[convId].tsx         # Private chat UI
+ │    ├─ /hr
+ │    │    ├─ page.tsx                   # User mgmt, reports, backups
+ │    │    └─ /chat/[convId].tsx
+ │    └─ /settings
+ │         └─ NotificationsForm.tsx      # Global & per-user toggles
+ ├─ /components
+ │    ├─ ChatWindow.tsx                  # Reusable real-time chat widget
+ │    ├─ TimesheetGrid.tsx               # Calendar grid + entry controls
+ │    └─ ToastContainer.tsx              # react-toastify setup
+ ├─ /lib
+ │    ├─ auth.ts                         # NextAuth.js config & role middleware
+ │    ├─ db.ts                           # Prisma client init
+ │    ├─ mailer.ts                       # nodemailer wrapper with flag check
+ │    ├─ backup.ts                       # Cron job setup & manual backup logic
+ │    ├─ messaging.ts                    # Socket.IO init & auth middleware
+ │    └─ utils.ts                        # Date helpers, hour calculations, validation
+ ├─ /prisma
+ │    ├─ schema.prisma                   # Data models & relations
+ │    └─ migrations/                     # Auto-generated migration files
+ ├─ /scripts
+ │    └─ manualBackup.ts                 # CLI trigger for on-demand backup
+ └─ /tests
+      ├─ unit/                           # Validation, utility, component tests
+      └─ integration/                    # API and end-to-end flows
+7. Data Model & Schema (Prisma)
+User
+
+Holds email, name, role (STAFF/MANAGER/HR/ADMIN), manager linkage, pay rate, and a JSON settings field.
+
+settings.emailNotifications defaults to false.
+
+Timesheet
+
+One per user per pay period, with periodStart, periodEnd, and state (PENDING_STAFF → PENDING_MANAGER → PENDING_HR → APPROVED).
+
+Stores Base64 signatures at each step and an optional manager note.
+
+TimesheetEntry
+
+A child record per day of the period, holding up to three in/out DateTime pairs plus a plawaHours float.
+
+TimesheetMessage
+
+Messages scoped to a specific timesheet. Contains senderId, content, and timestamp.
+
+Conversation / Message
+
+General 1:1 chat threads between any two users. Conversations link participants; messages link to a conversation.
+
+prisma
+Copy
+Edit
+enum Role { STAFF MANAGER HR ADMIN }
+enum TsState { PENDING_STAFF PENDING_MANAGER PENDING_HR APPROVED }
+
+model User {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  name          String
+  role          Role         @default(STAFF)
+  managerId     String?      
+  payRate       Float
+  settings      Json         @default("{}") 
+  timesheets    Timesheet[]
+  conversations Conversation[] @relation("ConvParticipants", references: [id])
+  createdAt     DateTime     @default(now())
+}
+
+model Timesheet {
+  id            String               @id @default(cuid())
+  user          User                 @relation(fields: [userId], references: [id])
+  userId        String
+  periodStart   DateTime
+  periodEnd     DateTime
+  state         TsState              @default(PENDING_STAFF)
+  entries       TimesheetEntry[]     
+  staffSig      String?              
+  managerSig    String?
+  hrSig         String?
+  managerNote   String?
+  messages      TimesheetMessage[]   
+  updatedAt     DateTime             @updatedAt
+}
+
+model TimesheetEntry {
+  id           String    @id @default(cuid())
+  ts           Timesheet @relation(fields: [tsId], references: [id])
+  tsId         String
+  date         DateTime
+  in1          DateTime?
+  out1         DateTime?
+  in2          DateTime?
+  out2         DateTime?
+  in3          DateTime?
+  out3         DateTime?
+  plawaHours   Float     @default(0)
+}
+
+model TimesheetMessage {
+  id           String    @id @default(cuid())
+  ts           Timesheet @relation(fields: [tsId], references: [id])
+  tsId         String
+  sender       User      @relation(fields: [senderId], references: [id])
+  senderId     String
+  content      String
+  createdAt    DateTime  @default(now())
+}
+
+model Conversation {
+  id            String      @id @default(cuid())
+  participants  User[]      @relation("ConvParticipants", references: [id])
+  messages      Message[]   
+}
+
+model Message {
+  id            String       @id @default(cuid())
+  conv          Conversation @relation(fields: [convId], references: [id])
+  convId        String
+  sender        User         @relation(fields: [senderId], references: [id])
+  senderId      String
+  content       String
+  createdAt     DateTime     @default(now())
+}
+8. Core Workflows & Logic
+8.1 Pay-Period & Timesheet Lifecycle
+On User Login
+
+Server checks for an existing Timesheet record where today ∈ [periodStart, periodEnd].
+
+If none exists, Prisma creates one with state = PENDING_STAFF and auto-generated TimesheetEntry rows—one per day in that period.
+
+Entry & Validation
+
+TimesheetGrid renders each day’s in/out controls.
+
+Uses React Hook Form to manage state; Zod schemas enforce business rules:
+
+Each inX < outX
+
+No overlap between intervals
+
+plawaHours ≥ 0 and ≤ daily max
+
+On every change, a utility recalculates:
+
+dailyTotal = Σ(outX − inX) + plawaHours
+
+periodTotal = Σ(dailyTotal)
+
+Display totals live above the grid.
+
+8.2 Submission & Approval
+Staff “Sign & Submit”
+
+Opens a modal with react-signature-canvas. User draws signature → captured as Base64 string in staffSig.
+
+Client POSTs to /api/timesheet/[id]/submit. Server:
+
+Validates entries again server-side.
+
+Saves staffSig, updates state → PENDING_MANAGER, updates updatedAt.
+
+Emits Socket.IO event timesheetSubmitted to the manager’s room.
+
+If settings.emailNotifications = true for manager, send email via nodemailer.
+
+Return success → client toast “Submitted to Manager.”
+
+Manager Review
+
+Manager sees pending items on /manager.
+
+Clicking one opens the same grid (read-only) plus signature canvas and comment textarea.
+
+On “Approve”: POST /api/timesheet/[id]/approve → saves managerSig, state → PENDING_HR, emits events, conditional email to HR, client toast.
+
+On “Deny”: POST /api/timesheet/[id]/deny with managerNote → state → PENDING_STAFF, emits events to staff, client toast.
+
+HR Finalization
+
+HR dashboard lists PENDING_HR items.
+
+On review, HR signs → state → APPROVED, saves hrSig.
+
+Emits final event, optional email to staff, manager; client toast.
+
+8.3 Notification Configuration
+Settings Page
+
+Global toggle overrides a default in /lib/mailer.ts.
+
+Per-user overrides stored in User.settings.emailNotifications.
+
+UI uses Headless UI <Switch>; on change, POST to /api/settings/notifications.
+
+Successful save triggers react-toastify “Settings updated.”
+
+8.4 Real-Time Messaging
+Socket.IO Server
+
+On connection: validate JWT via NextAuth session.
+
+Join rooms:
+
+ts-{tsId} if user ∈ { staff owner, manager, any HR }.
+
+conv-{convId} if user is one of the two participants.
+
+Sending a Message
+
+Client emits sendMessage with { room, content }.
+
+Server API route:
+
+Validates room membership and message length.
+
+Persists in Prisma (TimesheetMessage or Message).
+
+Broadcasts to room newMessage.
+
+Client listener shows incoming text in ChatWindow, then auto-scrolls; also fires a toast “New message”.
+
+8.5 Reporting & Export
+Filter UI on HR dashboard: multi-select users, date pickers, state checkboxes.
+
+On “Generate”: server queries Prisma, returns JSON.
+
+Export options:
+
+CSV via papaparse server-side stringification, streamed as .csv response.
+
+PDF via pdf-lib, programmatically laying out table rows and headers, then streamed as .pdf.
+
+8.6 Automated Backups
+Cron Job
+
+node-cron uses HR’s cron expression (e.g. 0 2 * * *) from settings.
+
+At runtime, copies db.sqlite to timestamped zip in /backups.
+
+Applies a retention policy—delete oldest beyond N days.
+
+On success/failure, emits event to HR console and toast if admin online.
+
+Manual Backup
+
+Button in HR UI calls /api/backup/manual. Same logic as cron, returns status → toast.
+
+8.7 Error Handling & Logging
+API Routes
+
+Wrapped in withErrorHandler: catches exceptions, logs via pino, returns { error: { code, message } }.
+
+Client
+
+All fetch requests .catch() to display react-toastify error toasts.
+
+Sentry
+
+Integrated in both API and client to capture uncaught exceptions and promise rejections.
+
+9. UI/UX & Styling Details
+Layout
+
+Persistent sidebar: collapsible on mobile, highlights active section.
+
+Main content: centered cards for dashboards, full-width for grids.
+
+Color & Typography
+
+Neutral background, accent brand color for primary buttons and highlights.
+
+Accessible font sizes—text-base for body, text-xl for headings.
+
+Animations
+
+Page transitions via Framer Motion’s AnimatePresence.
+
+Grid cell focus and validation feedback with whileHover/whileTap.
+
+Accessibility
+
+All form fields labeled; signatures and chat flagged with ARIA roles.
+
+Keyboard navigation supported in chat and grid.
+
+10. Deployment & Maintenance
+Environment Configuration
+
+Provide a .env with:
+
+ini
+Copy
+Edit
+DATABASE_URL="file:./db.sqlite"
+NEXTAUTH_SECRET="…"
+SMTP_HOST="…"
+SMTP_PORT=587
+SMTP_USER="…"
+SMTP_PASS="…"
+BACKUP_CRON="0 2 * * *"
+BACKUP_PATH="./backups"
+EMAIL_NOTIFICATIONS_DEFAULT="false"
+Process Supervision
+
+Use PM2:
+
+bash
+Copy
+Edit
+pm2 start npm --name tms -- start
+pm2 save
+pm2 startup
+Or configure a systemd unit pointing to npm start.
+
+Reverse Proxy
+
+Nginx config to proxy localhost:3000 with SSL via Let’s Encrypt.
+
+Local Scripts
+
+npm run lint (ESLint)
+
+npm run typecheck (tsc)
+
+npm run test (Jest)
+
+11. Milestones & Timeline
+Phase	Deliverables	Duration
+1. Foundation	Repo setup, NextAuth, Prisma schema, core UI shell	1 week
+2. Staff Workflow	TimesheetGrid, client/server validation, submit flow	2 weeks
+3. Manager Workflow	Approval UI, state transitions, notification hooks	1.5 weeks
+4. HR Console & Reporting	User mgmt, settings UI, CSV/PDF export	2 weeks
+5. Messaging Subsystem	Socket.IO integration, ChatWindow, security middleware	1 week
+6. Backups & Resilience	Cron jobs, manual backup, retention logic	1 week
+7. Polish & QA	Animations, accessibility audit, full test coverage	1.5 weeks
+8. Deployment & Handoff	PM2/systemd, Nginx config, documentation	1 week
+
+Total Estimate: ~11 weeks
+
+12. Next Steps
+Scaffold the repository structure and install all dependencies (see table below).
+
+Define environment variables in .env.example.
+
+Implement Prisma migrations and seed an initial Admin user.
+
+Prototype the TimesheetGrid component and staff entry flow.
+
+Design Review: finalize chat and toast UI patterns before full integration.
+
+13. Recommended Libraries & Versions
+Category	Library	Version	Purpose
+Forms & Validation	react-hook-form	7.57.0	Form state management
+zod	3.25.64	Type-safe input validation
+Date/Time Selection	react-day-picker	9.7.0	Calendar & date-range picker
+react-time-picker	7.0.0	AM/PM time input
+Digital Signatures	react-signature-canvas	1.1.0-alpha.2	Canvas signature capture
+Data Grids	@tanstack/react-table	8.21.3	Headless hook-based table
+ag-grid-community	33.3.2	Enterprise-grade grid (filtering, export)
+Toasts	react-toastify	11.0.5	In-page notifications
+Real-Time Chat	socket.io	4.8.1	Server side
+socket.io-client	4.8.1	Client side
+Chat UI	react-chat-elements	12.0.18	Prebuilt chat components
+stream-chat-react	13.1.0	Alternative chat SDK
+Scheduling & Cron	node-cron	4.1.0	Cron-style job scheduling
+Authentication	next-auth	4.24.11	Authentication & session management
+ORM & Database	prisma / @prisma/client	6.9.0	Database toolkit & type-safe client
+Email Delivery	nodemailer	7.0.3	SMTP client
+Reporting & Exports	pdf-lib	1.17.1	PDF generation
+papaparse	5.5.3	CSV parsing/stringify
+Logging & Monitoring	pino	9.7.0	Structured logging
+winston	3.17.0	Alternative structured logging
+@sentry/node	9.29.0	Runtime error monitoring
+Styling & UI	tailwindcss	4.1.10	Utility-first CSS
+@headlessui/react	2.2.4	Accessible unstyled UI components
+framer-motion	12.18.1	Declarative animations
