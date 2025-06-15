@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
 import { prisma } from '@/lib/db'
+import { createTimesheetNotification } from '@/lib/notifications'
 
 // Local constants to replace Prisma enums
 const TS_STATE = {
@@ -60,6 +61,19 @@ export async function POST(
         updatedAt: new Date()
       }
     })
+
+    // Create notification for the timesheet owner
+    try {
+      await createTimesheetNotification(
+        timesheet.user.id,
+        'denial',
+        params.id,
+        note.trim()
+      )
+    } catch (notificationError) {
+      console.error('Failed to create HR denial notification:', notificationError)
+      // Don't fail the denial if notification fails
+    }
 
     return NextResponse.json({
       message: 'Timesheet denied and returned to staff',

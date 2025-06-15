@@ -6,7 +6,7 @@ import { toast } from 'react-toastify'
 import { calculateDailyHours, calculatePeriodTotal, formatTime, parseTimeString } from '@/lib/utils'
 import { TimesheetWithEntries } from '@/lib/timesheet'
 import { apiClient } from '@/lib/api-client'
-import { CheckCircle, MessageSquare, ChevronDown, ChevronRight, User, UserCheck, Clock, X } from 'lucide-react'
+import { CheckCircle, MessageSquare, ChevronDown, ChevronRight, User, UserCheck, Clock, X, Copy, Calendar } from 'lucide-react'
 
 interface TimesheetGridProps {
   timesheet: TimesheetWithEntries
@@ -49,6 +49,19 @@ export default function TimesheetGrid({ timesheet, onEntryUpdate, readOnly = fal
     hour: '12',
     minute: '00',
     ampm: 'AM'
+  })
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    sourceEntryId: string
+    targetEntryId: string
+    targetDate: Date
+    isWeekend: boolean
+  }>({
+    isOpen: false,
+    sourceEntryId: '',
+    targetEntryId: '',
+    targetDate: new Date(),
+    isWeekend: false
   })
   const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
 
@@ -198,6 +211,10 @@ export default function TimesheetGrid({ timesheet, onEntryUpdate, readOnly = fal
       }
       
       minute = minutes.toString().padStart(2, '0')
+    } else {
+      // Set default AM/PM based on field type
+      // In1 defaults to AM, all others default to PM
+      ampm = field === 'in1' ? 'AM' : 'PM'
     }
     
     setTimePicker({
@@ -282,6 +299,153 @@ export default function TimesheetGrid({ timesheet, onEntryUpdate, readOnly = fal
     return calculatePeriodTotal(entries)
   }
 
+  const getPeriodPlawaTotal = () => {
+    return entries.reduce((total, entry) => total + (entry.plawaHours || 0), 0)
+  }
+
+  const handleDuplicateRow = (sourceEntryId: string) => {
+    if (readOnly) return
+
+    const sourceEntry = entries.find(e => e.id === sourceEntryId)
+    if (!sourceEntry) return
+
+    const sourceIndex = entries.findIndex(e => e.id === sourceEntryId)
+    if (sourceIndex === -1 || sourceIndex === entries.length - 1) return
+
+    // Find the next entry to duplicate to
+    let targetIndex = sourceIndex + 1
+    let targetEntry = entries[targetIndex]
+
+    // Check if target is a weekend
+    const targetIsWeekend = isWeekend(targetEntry.date)
+
+    if (targetIsWeekend) {
+      // Show confirmation dialog for weekend
+      setConfirmDialog({
+        isOpen: true,
+        sourceEntryId,
+        targetEntryId: targetEntry.id,
+        targetDate: targetEntry.date,
+        isWeekend: true
+      })
+    } else {
+      // Directly duplicate to weekday
+      duplicateToEntry(sourceEntryId, targetEntry.id)
+    }
+  }
+
+  const handleWeekendConfirmation = (skipWeekend: boolean) => {
+    const { sourceEntryId, targetEntryId } = confirmDialog
+
+    if (skipWeekend) {
+      // Find next weekday
+      const sourceIndex = entries.findIndex(e => e.id === sourceEntryId)
+      let nextWeekdayIndex = sourceIndex + 1
+
+      while (nextWeekdayIndex < entries.length && isWeekend(entries[nextWeekdayIndex].date)) {
+        nextWeekdayIndex++
+      }
+
+      if (nextWeekdayIndex < entries.length) {
+        duplicateToEntry(sourceEntryId, entries[nextWeekdayIndex].id)
+      } else {
+        toast.info('No weekday found to duplicate to')
+      }
+    } else {
+      // Duplicate to weekend
+      duplicateToEntry(sourceEntryId, targetEntryId)
+    }
+
+    setConfirmDialog({
+      isOpen: false,
+      sourceEntryId: '',
+      targetEntryId: '',
+      targetDate: new Date(),
+      isWeekend: false
+    })
+  }
+
+  const duplicateToEntry = async (sourceEntryId: string, targetEntryId: string) => {
+    const sourceEntry = entries.find(e => e.id === sourceEntryId)
+    const targetEntry = entries.find(e => e.id === targetEntryId)
+
+    if (!sourceEntry || !targetEntry) return
+
+    setIsUpdating(targetEntryId)
+
+    try {
+      // Prepare the data to duplicate
+      const updateData: any = {
+        plawaHours: sourceEntry.plawaHours,
+        comments: sourceEntry.comments
+      }
+
+      // Copy time fields if they exist
+      if (sourceEntry.in1) {
+        const timeDate = new Date(targetEntry.date)
+        timeDate.setHours(sourceEntry.in1.getHours(), sourceEntry.in1.getMinutes(), 0, 0)
+        updateData.in1 = timeDate.toISOString()
+      }
+      if (sourceEntry.out1) {
+        const timeDate = new Date(targetEntry.date)
+        timeDate.setHours(sourceEntry.out1.getHours(), sourceEntry.out1.getMinutes(), 0, 0)
+        updateData.out1 = timeDate.toISOString()
+      }
+      if (sourceEntry.in2) {
+        const timeDate = new Date(targetEntry.date)
+        timeDate.setHours(sourceEntry.in2.getHours(), sourceEntry.in2.getMinutes(), 0, 0)
+        updateData.in2 = timeDate.toISOString()
+      }
+      if (sourceEntry.out2) {
+        const timeDate = new Date(targetEntry.date)
+        timeDate.setHours(sourceEntry.out2.getHours(), sourceEntry.out2.getMinutes(), 0, 0)
+        updateData.out2 = timeDate.toISOString()
+      }
+      if (sourceEntry.in3) {
+        const timeDate = new Date(targetEntry.date)
+        timeDate.setHours(sourceEntry.in3.getHours(), sourceEntry.in3.getMinutes(), 0, 0)
+        updateData.in3 = timeDate.toISOString()
+      }
+      if (sourceEntry.out3) {
+        const timeDate = new Date(targetEntry.date)
+        timeDate.setHours(sourceEntry.out3.getHours(), sourceEntry.out3.getMinutes(), 0, 0)
+        updateData.out3 = timeDate.toISOString()
+      }
+
+      // Update the target entry
+      const updatedEntry = await apiClient.patch(`/api/timesheet/${timesheet.id}/entry/${targetEntryId}`, updateData)
+
+      // Update local state
+      setEntries(prev => prev.map(e => {
+        if (e.id === targetEntryId) {
+          return {
+            ...e,
+            plawaHours: sourceEntry.plawaHours,
+            comments: sourceEntry.comments,
+            in1: sourceEntry.in1 ? new Date(targetEntry.date.getFullYear(), targetEntry.date.getMonth(), targetEntry.date.getDate(), sourceEntry.in1.getHours(), sourceEntry.in1.getMinutes()) : null,
+            out1: sourceEntry.out1 ? new Date(targetEntry.date.getFullYear(), targetEntry.date.getMonth(), targetEntry.date.getDate(), sourceEntry.out1.getHours(), sourceEntry.out1.getMinutes()) : null,
+            in2: sourceEntry.in2 ? new Date(targetEntry.date.getFullYear(), targetEntry.date.getMonth(), targetEntry.date.getDate(), sourceEntry.in2.getHours(), sourceEntry.in2.getMinutes()) : null,
+            out2: sourceEntry.out2 ? new Date(targetEntry.date.getFullYear(), targetEntry.date.getMonth(), targetEntry.date.getDate(), sourceEntry.out2.getHours(), sourceEntry.out2.getMinutes()) : null,
+            in3: sourceEntry.in3 ? new Date(targetEntry.date.getFullYear(), targetEntry.date.getMonth(), targetEntry.date.getDate(), sourceEntry.in3.getHours(), sourceEntry.in3.getMinutes()) : null,
+            out3: sourceEntry.out3 ? new Date(targetEntry.date.getFullYear(), targetEntry.date.getMonth(), targetEntry.date.getDate(), sourceEntry.out3.getHours(), sourceEntry.out3.getMinutes()) : null,
+          }
+        }
+        return e
+      }))
+
+      if (onEntryUpdate) {
+        onEntryUpdate(targetEntryId, updatedEntry)
+      }
+
+      toast.success(`Row duplicated to ${format(targetEntry.date, 'MMM d')}`)
+    } catch (error) {
+      console.error('Error duplicating row:', error)
+      toast.error('Failed to duplicate row')
+    } finally {
+      setIsUpdating(null)
+    }
+  }
+
   const TimeButton = ({ 
     value, 
     onClick, 
@@ -306,78 +470,108 @@ export default function TimesheetGrid({ timesheet, onEntryUpdate, readOnly = fal
   )
 
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200">
+    <div className="bg-white shadow rounded-lg overflow-hidden print:shadow-none print:border print:border-gray-400">
+      <div className="px-6 py-4 border-b border-gray-200 timesheet-header print:px-2 print:py-2">
         <div className="flex justify-between items-center">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">
+            <h3 className="text-lg font-medium text-gray-900 print:text-black">
               Pay Period: {format(timesheet.periodStart, 'MMM d')} - {format(timesheet.periodEnd, 'MMM d, yyyy')}
             </h3>
             {/* Signature Indicators */}
-            <div className="flex items-center space-x-4 mt-2">
-              <div className={`flex items-center space-x-1 ${timesheet.staffSig ? 'text-green-600' : 'text-gray-400'}`}>
-                {timesheet.staffSig ? <UserCheck className="w-4 h-4" /> : <User className="w-4 h-4" />}
+            <div className="flex items-center space-x-4 mt-2 signature-indicators print:space-x-2">
+              <div className={`flex items-center space-x-1 ${timesheet.staffSig ? 'text-green-600' : 'text-gray-400'} print:text-black`}>
+                {timesheet.staffSig ? <UserCheck className="w-4 h-4 print:hidden" /> : <User className="w-4 h-4 print:hidden" />}
                 <div className="flex flex-col">
-                  <span className="text-sm">Staff {timesheet.staffSig ? 'Signed' : 'Unsigned'}</span>
+                  <span className="text-sm print:text-xs">Staff {timesheet.staffSig ? 'Signed' : 'Unsigned'}</span>
+                  {timesheet.staffSig && timesheet.staffSigAt && (
+                    <span className="text-xs text-gray-500 print:text-black">
+                      {format(new Date(timesheet.staffSigAt), 'MMM d, h:mm a')}
+                    </span>
+                  )}
                 </div>
               </div>
-              <div className={`flex items-center space-x-1 ${timesheet.managerSig ? 'text-green-600' : 'text-gray-400'}`}>
-                {timesheet.managerSig ? <UserCheck className="w-4 h-4" /> : <User className="w-4 h-4" />}
+              <div className={`flex items-center space-x-1 ${timesheet.managerSig ? 'text-green-600' : 'text-gray-400'} print:text-black`}>
+                {timesheet.managerSig ? <UserCheck className="w-4 h-4 print:hidden" /> : <User className="w-4 h-4 print:hidden" />}
                 <div className="flex flex-col">
-                  <span className="text-sm">Manager {timesheet.managerSig ? 'Signed' : 'Unsigned'}</span>
+                  <span className="text-sm print:text-xs">Manager {timesheet.managerSig ? 'Signed' : 'Unsigned'}</span>
+                  {timesheet.managerSig && timesheet.managerSigAt && (
+                    <span className="text-xs text-gray-500 print:text-black">
+                      {format(new Date(timesheet.managerSigAt), 'MMM d, h:mm a')}
+                    </span>
+                  )}
                 </div>
               </div>
-              <div className={`flex items-center space-x-1 ${timesheet.hrSig ? 'text-green-600' : 'text-gray-400'}`}>
-                {timesheet.hrSig ? <UserCheck className="w-4 h-4" /> : <User className="w-4 h-4" />}
+              <div className={`flex items-center space-x-1 ${timesheet.hrSig ? 'text-green-600' : 'text-gray-400'} print:text-black`}>
+                {timesheet.hrSig ? <UserCheck className="w-4 h-4 print:hidden" /> : <User className="w-4 h-4 print:hidden" />}
                 <div className="flex flex-col">
-                  <span className="text-sm">HR {timesheet.hrSig ? 'Signed' : 'Unsigned'}</span>
+                  <span className="text-sm print:text-xs">HR {timesheet.hrSig ? 'Signed' : 'Unsigned'}</span>
+                  {timesheet.hrSig && timesheet.hrSigAt && (
+                    <span className="text-xs text-gray-500 print:text-black">
+                      {format(new Date(timesheet.hrSigAt), 'MMM d, h:mm a')}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-500">Total Hours</div>
-            <div className="text-2xl font-bold text-primary-600">
-              {getPeriodTotal().toFixed(2)}
+          <div className="text-right totals">
+            <div className="space-y-2">
+              <div>
+                <div className="text-sm text-gray-500 print:text-black">Total Hours</div>
+                <div className="text-2xl font-bold text-primary-600 print:text-black print:text-lg">
+                  {getPeriodTotal().toFixed(2)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 print:text-black">PLAWA Hours This Period</div>
+                <div className="text-lg font-semibold text-green-600 print:text-black print:text-sm">
+                  {getPeriodPlawaTotal().toFixed(2)}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-gray-200 timesheet-table">
+          <thead className="bg-gray-50 print:bg-gray-100">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider date-column print:text-black">
                 Date
               </th>
-              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider time-column print:text-black">
                 In 1
               </th>
-              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider time-column print:text-black">
                 Out 1
               </th>
-              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider time-column print:text-black">
                 In 2
               </th>
-              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider time-column print:text-black">
                 Out 2
               </th>
-              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider time-column print:text-black">
                 In 3
               </th>
-              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider time-column print:text-black">
                 Out 3
               </th>
-              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider plawa-column print:text-black">
                 PLAWA
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider total-column print:text-black">
                 Daily Total
               </th>
-              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider comments-column print:text-black">
                 Comments
               </th>
+              {!readOnly && (
+                <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider print:hidden">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -391,116 +585,177 @@ export default function TimesheetGrid({ timesheet, onEntryUpdate, readOnly = fal
               return (
                 <React.Fragment key={entry.id}>
                   <tr 
-                    className={`${isWeekendDay ? 'bg-blue-50' : ''} ${isUpdatingThis ? 'opacity-50' : ''}`}
+                    className={`${isWeekendDay ? 'bg-blue-50 print:bg-gray-100' : ''} ${isUpdatingThis ? 'opacity-50' : ''}`}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap date-column print:text-black">
+                      <div className="text-sm font-medium text-gray-900 print:text-black">
                         {format(entry.date, 'EEE, MMM d')}
                       </div>
                       {isWeekendDay && (
-                        <div className="text-xs text-blue-600">Weekend</div>
+                        <div className="text-xs text-blue-600 print:text-black">Weekend</div>
                       )}
                     </td>
                     
-                    <td className="px-3 py-4 text-center">
-                      <TimeButton
-                        value={entry.in1}
-                        onClick={() => openTimePicker(entry.id, 'in1', entry.in1 || null)}
-                        disabled={readOnly || isUpdatingThis}
-                        placeholder="In 1"
-                      />
+                    <td className="px-3 py-4 text-center time-column">
+                      {readOnly ? (
+                        <span className="text-sm print:text-black">
+                          {entry.in1 ? formatTime(entry.in1) : '-'}
+                        </span>
+                      ) : (
+                        <TimeButton
+                          value={entry.in1}
+                          onClick={() => openTimePicker(entry.id, 'in1', entry.in1 || null)}
+                          disabled={readOnly || isUpdatingThis}
+                          placeholder="In 1"
+                        />
+                      )}
                     </td>
                     
-                    <td className="px-3 py-4 text-center">
-                      <TimeButton
-                        value={entry.out1}
-                        onClick={() => openTimePicker(entry.id, 'out1', entry.out1 || null)}
-                        disabled={readOnly || isUpdatingThis}
-                        placeholder="Out 1"
-                      />
+                    <td className="px-3 py-4 text-center time-column">
+                      {readOnly ? (
+                        <span className="text-sm print:text-black">
+                          {entry.out1 ? formatTime(entry.out1) : '-'}
+                        </span>
+                      ) : (
+                        <TimeButton
+                          value={entry.out1}
+                          onClick={() => openTimePicker(entry.id, 'out1', entry.out1 || null)}
+                          disabled={readOnly || isUpdatingThis}
+                          placeholder="Out 1"
+                        />
+                      )}
                     </td>
                     
-                    <td className="px-3 py-4 text-center">
-                      <TimeButton
-                        value={entry.in2}
-                        onClick={() => openTimePicker(entry.id, 'in2', entry.in2 || null)}
-                        disabled={readOnly || isUpdatingThis}
-                        placeholder="In 2"
-                      />
+                    <td className="px-3 py-4 text-center time-column">
+                      {readOnly ? (
+                        <span className="text-sm print:text-black">
+                          {entry.in2 ? formatTime(entry.in2) : '-'}
+                        </span>
+                      ) : (
+                        <TimeButton
+                          value={entry.in2}
+                          onClick={() => openTimePicker(entry.id, 'in2', entry.in2 || null)}
+                          disabled={readOnly || isUpdatingThis}
+                          placeholder="In 2"
+                        />
+                      )}
                     </td>
                     
-                    <td className="px-3 py-4 text-center">
-                      <TimeButton
-                        value={entry.out2}
-                        onClick={() => openTimePicker(entry.id, 'out2', entry.out2 || null)}
-                        disabled={readOnly || isUpdatingThis}
-                        placeholder="Out 2"
-                      />
+                    <td className="px-3 py-4 text-center time-column">
+                      {readOnly ? (
+                        <span className="text-sm print:text-black">
+                          {entry.out2 ? formatTime(entry.out2) : '-'}
+                        </span>
+                      ) : (
+                        <TimeButton
+                          value={entry.out2}
+                          onClick={() => openTimePicker(entry.id, 'out2', entry.out2 || null)}
+                          disabled={readOnly || isUpdatingThis}
+                          placeholder="Out 2"
+                        />
+                      )}
                     </td>
                     
-                    <td className="px-3 py-4 text-center">
-                      <TimeButton
-                        value={entry.in3}
-                        onClick={() => openTimePicker(entry.id, 'in3', entry.in3 || null)}
-                        disabled={readOnly || isUpdatingThis}
-                        placeholder="In 3"
-                      />
+                    <td className="px-3 py-4 text-center time-column">
+                      {readOnly ? (
+                        <span className="text-sm print:text-black">
+                          {entry.in3 ? formatTime(entry.in3) : '-'}
+                        </span>
+                      ) : (
+                        <TimeButton
+                          value={entry.in3}
+                          onClick={() => openTimePicker(entry.id, 'in3', entry.in3 || null)}
+                          disabled={readOnly || isUpdatingThis}
+                          placeholder="In 3"
+                        />
+                      )}
                     </td>
                     
-                    <td className="px-3 py-4 text-center">
-                      <TimeButton
-                        value={entry.out3}
-                        onClick={() => openTimePicker(entry.id, 'out3', entry.out3 || null)}
-                        disabled={readOnly || isUpdatingThis}
-                        placeholder="Out 3"
-                      />
+                    <td className="px-3 py-4 text-center time-column">
+                      {readOnly ? (
+                        <span className="text-sm print:text-black">
+                          {entry.out3 ? formatTime(entry.out3) : '-'}
+                        </span>
+                      ) : (
+                        <TimeButton
+                          value={entry.out3}
+                          onClick={() => openTimePicker(entry.id, 'out3', entry.out3 || null)}
+                          disabled={readOnly || isUpdatingThis}
+                          placeholder="Out 3"
+                        />
+                      )}
                     </td>
                     
-                    <td className="px-3 py-4 text-center">
-                      <input
-                        type="number"
-                        min="0"
-                        max="24"
-                        step="0.25"
-                        value={entry.plawaHours}
-                        onChange={(e) => handlePlawaHoursChange(entry.id, e.target.value)}
-                        disabled={readOnly || isUpdatingThis}
-                        className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      />
+                    <td className="px-3 py-4 text-center plawa-column">
+                      {readOnly ? (
+                        <span className="text-sm print:text-black">
+                          {entry.plawaHours || 0}
+                        </span>
+                      ) : (
+                        <input
+                          type="number"
+                          min="0"
+                          max="24"
+                          step="0.25"
+                          value={entry.plawaHours}
+                          onChange={(e) => handlePlawaHoursChange(entry.id, e.target.value)}
+                          disabled={readOnly || isUpdatingThis}
+                          className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed print:border-black print:text-black"
+                        />
+                      )}
                     </td>
                     
-                    <td className="px-6 py-4 text-right">
-                      <div className="text-sm font-medium text-gray-900">
+                    <td className="px-6 py-4 text-right total-column">
+                      <div className="text-sm font-medium text-gray-900 print:text-black">
                         {dailyTotal.toFixed(2)}
                       </div>
                     </td>
 
-                    <td className="px-3 py-4 text-center">
-                      <button
-                        onClick={() => toggleRowExpansion(entry.id)}
-                        className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
-                          hasComments 
-                            ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' 
-                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                        }`}
-                        title={hasComments ? 'Has comments' : 'Add comment'}
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="w-4 h-4" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4" />
-                        )}
-                        {hasComments && (
-                          <MessageSquare className="w-3 h-3 absolute" />
-                        )}
-                      </button>
+                    <td className="px-3 py-4 text-center comments-column">
+                      {readOnly ? (
+                        <div className="text-xs text-gray-600 print:text-black max-w-20 truncate">
+                          {entry.comments || '-'}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => toggleRowExpansion(entry.id)}
+                          className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors print:hidden ${
+                            hasComments 
+                              ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' 
+                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                          }`}
+                          title={hasComments ? 'Has comments' : 'Add comment'}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" />
+                          )}
+                          {hasComments && (
+                            <MessageSquare className="w-3 h-3 absolute" />
+                          )}
+                        </button>
+                      )}
                     </td>
+
+                    {!readOnly && (
+                      <td className="px-3 py-4 text-center print:hidden">
+                        <button
+                          onClick={() => handleDuplicateRow(entry.id)}
+                          disabled={isUpdatingThis || entries.findIndex(e => e.id === entry.id) === entries.length - 1}
+                          className="flex items-center justify-center w-8 h-8 rounded-full transition-colors bg-green-100 text-green-600 hover:bg-green-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                          title="Duplicate row to next day"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                   
                   {/* Expanded Comments Row */}
                   {isExpanded && (
                     <tr className={`${isWeekendDay ? 'bg-blue-25' : 'bg-gray-25'}`}>
-                      <td colSpan={10} className="px-6 py-4">
+                      <td colSpan={readOnly ? 10 : 11} className="px-6 py-4">
                         <div className="max-w-2xl">
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Comments for {format(entry.date, 'MMM d, yyyy')}
@@ -626,6 +881,70 @@ export default function TimesheetGrid({ timesheet, onEntryUpdate, readOnly = fal
                     OK
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Weekend Confirmation Dialog */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div 
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+              onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+            />
+
+            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
+                  <Copy className="w-5 h-5 mr-2 text-blue-600" />
+                  Weekend Detected
+                </h3>
+                <button
+                  onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  The next day ({format(confirmDialog.targetDate, 'EEEE, MMM d')}) is a weekend. 
+                  Would you like to:
+                </p>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <Calendar className="w-5 h-5 text-blue-600 mr-2" />
+                    <span className="text-sm font-medium text-blue-900">
+                      {format(confirmDialog.targetDate, 'EEEE, MMMM d, yyyy')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col space-y-3 mt-6">
+                <button
+                  onClick={() => handleWeekendConfirmation(false)}
+                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  Yes, duplicate to weekend day
+                </button>
+                <button
+                  onClick={() => handleWeekendConfirmation(true)}
+                  className="w-full px-4 py-3 bg-gray-600 text-white rounded-md text-sm font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                >
+                  No, skip to next weekday
+                </button>
+                <button
+                  onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>

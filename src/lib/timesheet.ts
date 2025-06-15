@@ -27,8 +27,11 @@ export interface TimesheetWithEntries {
   periodEnd: Date
   state: TsState
   staffSig?: string | null
+  staffSigAt?: Date | null
   managerSig?: string | null
+  managerSigAt?: Date | null
   hrSig?: string | null
+  hrSigAt?: Date | null
   managerNote?: string | null
   createdAt: Date
   updatedAt: Date
@@ -50,6 +53,10 @@ export interface TimesheetWithEntries {
     email: string
     role: string
     managerId?: string | null
+    manager?: {
+      id: string
+      name: string
+    } | null
   }
 }
 
@@ -74,6 +81,12 @@ export async function getOrCreateCurrentTimesheet(userId: string): Promise<Times
           email: true,
           role: true,
           managerId: true,
+          manager: {
+            select: {
+              id: true,
+              name: true,
+            }
+          }
         }
       }
     }
@@ -107,6 +120,12 @@ export async function getOrCreateCurrentTimesheet(userId: string): Promise<Times
             email: true,
             role: true,
             managerId: true,
+            manager: {
+              select: {
+                id: true,
+                name: true,
+              }
+            }
           }
         }
       }
@@ -177,6 +196,12 @@ export async function createTimesheetForPeriod(
             email: true,
             role: true,
             managerId: true,
+            manager: {
+              select: {
+                id: true,
+                name: true,
+              }
+            }
           }
         }
       }
@@ -247,6 +272,12 @@ export async function getTimesheetById(id: string, userId: string, userRole: str
           email: true,
           role: true,
           managerId: true,
+          manager: {
+            select: {
+              id: true,
+              name: true,
+            }
+          }
         }
       }
     }
@@ -331,13 +362,19 @@ export async function submitTimesheet(timesheetId: string, userId: string, signa
     throw new Error('Timesheet not found or not submittable')
   }
 
-  // Update timesheet with signature and change state (remove staffSigAt for now)
-  const updatedTimesheet = await prisma.timesheet.update({
-    where: { id: timesheetId },
-    data: {
-      staffSig: signature,
-      state: TS_STATE.PENDING_MANAGER,
-    },
+  // Update timesheet with staff signature and timestamp
+  await prisma.$executeRaw`
+    UPDATE Timesheet 
+    SET staffSig = ${signature}, 
+        staffSigAt = ${new Date().toISOString()},
+        state = ${TS_STATE.PENDING_MANAGER},
+        updatedAt = ${new Date().toISOString()}
+    WHERE id = ${timesheetId}
+  `
+
+  // Fetch the updated timesheet
+  const updatedTimesheet = await prisma.timesheet.findUnique({
+    where: { id: timesheetId }
   })
 
   return updatedTimesheet
@@ -370,6 +407,12 @@ export async function getUserTimesheets(userId: string, userRole: string) {
           email: true,
           role: true,
           managerId: true,
+          manager: {
+            select: {
+              id: true,
+              name: true,
+            }
+          }
         }
       },
       entries: {
@@ -408,13 +451,19 @@ export async function approveTimesheet(timesheetId: string, managerId: string, s
     throw new Error('Timesheet not found or not approvable')
   }
 
-  // Update timesheet with manager signature and change state (remove managerSigAt for now)
-  const updatedTimesheet = await prisma.timesheet.update({
-    where: { id: timesheetId },
-    data: {
-      managerSig: signature,
-      state: TS_STATE.PENDING_HR,
-    },
+  // Update timesheet with manager signature and timestamp
+  await prisma.$executeRaw`
+    UPDATE Timesheet 
+    SET managerSig = ${signature}, 
+        managerSigAt = ${new Date().toISOString()},
+        state = ${TS_STATE.PENDING_HR},
+        updatedAt = ${new Date().toISOString()}
+    WHERE id = ${timesheetId}
+  `
+
+  // Fetch the updated timesheet
+  const updatedTimesheet = await prisma.timesheet.findUnique({
+    where: { id: timesheetId }
   })
 
   return updatedTimesheet
@@ -436,15 +485,20 @@ export async function denyTimesheet(timesheetId: string, managerId: string, note
     throw new Error('Timesheet not found or not deniable')
   }
 
-  // Update timesheet with denial note and return to staff (remove staffSigAt for now)
-  const updatedTimesheet = await prisma.timesheet.update({
-    where: { id: timesheetId },
-    data: {
-      managerNote: note,
-      state: TS_STATE.PENDING_STAFF,
-      // Clear staff signature since it needs to be re-signed
-      staffSig: null,
-    },
+  // Update timesheet with denial note and return to staff
+  await prisma.$executeRaw`
+    UPDATE Timesheet 
+    SET managerNote = ${note}, 
+        state = ${TS_STATE.PENDING_STAFF},
+        staffSig = NULL,
+        staffSigAt = NULL,
+        updatedAt = ${new Date().toISOString()}
+    WHERE id = ${timesheetId}
+  `
+
+  // Fetch the updated timesheet
+  const updatedTimesheet = await prisma.timesheet.findUnique({
+    where: { id: timesheetId }
   })
 
   return updatedTimesheet
@@ -466,6 +520,12 @@ export async function getPendingManagerApprovals(managerId: string) {
           email: true,
           role: true,
           managerId: true,
+          manager: {
+            select: {
+              id: true,
+              name: true,
+            }
+          }
         }
       },
       entries: {

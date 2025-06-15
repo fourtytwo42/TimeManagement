@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
 import { approveTimesheet } from '@/lib/timesheet'
+import { createTimesheetNotification, createHRApprovalNotification, fulfillNotifications } from '@/lib/notifications'
+import { prisma } from '@/lib/db'
 
 export async function POST(
   request: NextRequest,
@@ -39,6 +41,47 @@ export async function POST(
       user.id,
       signature
     )
+
+    // Create notifications
+    try {
+      const timesheet = await prisma.timesheet.findUnique({
+        where: { id: params.id },
+        include: {
+          user: {
+            select: { id: true, name: true }
+          }
+        }
+      })
+      
+      if (timesheet) {
+        // Notify the timesheet owner of approval
+        await createTimesheetNotification(
+          timesheet.user.id,
+          'approval',
+          params.id
+        )
+
+        // Notify all HR users that a timesheet needs their approval
+        const hrUsers = await prisma.user.findMany({
+          where: { role: 'HR' },
+          select: { id: true }
+        })
+
+        for (const hrUser of hrUsers) {
+          await createHRApprovalNotification(
+            hrUser.id,
+            timesheet.user.name,
+            params.id
+          )
+        }
+
+        // Fulfill manager approval notifications
+        await fulfillNotifications(user.id, params.id, 'timesheet_approved')
+      }
+    } catch (notificationError) {
+      console.error('Failed to create approval notifications:', notificationError)
+      // Don't fail the approval if notification fails
+    }
 
     return NextResponse.json({
       message: 'Timesheet approved successfully',

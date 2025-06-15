@@ -5,10 +5,11 @@ import { toast } from 'react-toastify'
 import TimesheetGrid from '@/components/TimesheetGrid'
 import TimesheetComments from '@/components/TimesheetComments'
 import SignatureModal from '@/components/SignatureModal'
+import TimesheetTemplates from '@/components/TimesheetTemplates'
 import { TimesheetWithEntries } from '@/lib/timesheet'
 import { apiClient } from '@/lib/api-client'
 import { format } from 'date-fns'
-import { Clock, CheckCircle, AlertCircle, FileText, ArrowLeft, Plus, Calendar, X } from 'lucide-react'
+import { Clock, CheckCircle, AlertCircle, FileText, ArrowLeft, Plus, Calendar, X, File } from 'lucide-react'
 
 // Define timesheet states to avoid Prisma client issues
 const TS_STATE = {
@@ -53,6 +54,10 @@ export default function StaffTimesheetView() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [availablePeriods, setAvailablePeriods] = useState<PayPeriod[]>([])
   const [creatingTimesheet, setCreatingTimesheet] = useState(false)
+  const [showTemplates, setShowTemplates] = useState(false)
+  const [showCreateTemplateModal, setShowCreateTemplateModal] = useState(false)
+  const [templateName, setTemplateName] = useState('')
+  const [templateDescription, setTemplateDescription] = useState('')
 
   useEffect(() => {
     fetchTimesheets()
@@ -142,6 +147,42 @@ export default function StaffTimesheetView() {
   const handleShowCreateModal = () => {
     setShowCreateModal(true)
     fetchAvailablePeriods()
+  }
+
+  const handleCreateTemplateFromTimesheet = (timesheetId: string) => {
+    setShowCreateTemplateModal(true)
+    setTemplateName('')
+    setTemplateDescription('')
+  }
+
+  const handleSaveTemplate = async () => {
+    if (!selectedTimesheet || !templateName.trim()) {
+      toast.error('Template name is required')
+      return
+    }
+
+    try {
+      await apiClient.post('/api/timesheet/templates', {
+        name: templateName.trim(),
+        description: templateDescription.trim() || null,
+        timesheetId: selectedTimesheet.id,
+        isDefault: false
+      })
+
+      toast.success('Template created successfully!')
+      setShowCreateTemplateModal(false)
+      setTemplateName('')
+      setTemplateDescription('')
+    } catch (error: any) {
+      console.error('Error creating template:', error)
+      toast.error(error.response?.data?.error || 'Failed to create template')
+    }
+  }
+
+  const handleTemplateApplied = () => {
+    if (selectedTimesheet) {
+      fetchTimesheetDetails(selectedTimesheet.id)
+    }
   }
 
   const getStatusBadge = (state: TsState, hasManagerNote?: boolean) => {
@@ -266,14 +307,23 @@ export default function StaffTimesheetView() {
               </div>
             </div>
           </div>
-          {canSubmit && (
+          <div className="flex items-center space-x-3">
             <button
-              onClick={handleSubmit}
-              className="bg-primary-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+              onClick={() => setShowTemplates(!showTemplates)}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
-              Submit Timesheet
+              <File className="w-4 h-4 mr-2" />
+              Templates
             </button>
-          )}
+            {canSubmit && (
+              <button
+                onClick={handleSubmit}
+                className="bg-primary-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+              >
+                Submit Timesheet
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Manager Feedback Alert */}
@@ -287,6 +337,16 @@ export default function StaffTimesheetView() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Templates Section */}
+        {showTemplates && (
+          <TimesheetTemplates
+            timesheetId={selectedTimesheet.id}
+            onTemplateApplied={handleTemplateApplied}
+            onCreateFromTimesheet={handleCreateTemplateFromTimesheet}
+            className="mb-6"
+          />
         )}
 
         {/* Timesheet Grid */}
@@ -314,6 +374,81 @@ export default function StaffTimesheetView() {
           title="Submit Timesheet"
           description="Please sign below to submit your timesheet for approval."
         />
+
+        {/* Create Template Modal */}
+        {showCreateTemplateModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div 
+                className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+                onClick={() => setShowCreateTemplateModal(false)}
+              />
+
+              <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
+                    <File className="w-5 h-5 mr-2" />
+                    Save as Template
+                  </h3>
+                  <button
+                    onClick={() => setShowCreateTemplateModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Create a template from this timesheet's time patterns. Templates ignore PLAWA hours and focus on time entries and day types (weekdays vs weekends).
+                  </p>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Template Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={templateName}
+                      onChange={(e) => setTemplateName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="e.g., Standard Work Week"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={templateDescription}
+                      onChange={(e) => setTemplateDescription(e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Optional description of this template"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    onClick={() => setShowCreateTemplateModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveTemplate}
+                    disabled={!templateName.trim()}
+                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Create Template
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }

@@ -60,6 +60,11 @@ export async function GET(
     const endDate = new Date()
     const startDate = subMonths(endDate, months)
 
+    // Calculate current year range for PLAWA tracking
+    const currentYear = new Date().getFullYear()
+    const yearStart = new Date(currentYear, 0, 1) // January 1st of current year
+    const yearEnd = new Date(currentYear, 11, 31, 23, 59, 59) // December 31st of current year
+
     // Get all timesheets for the user in the date range
     const timesheets = await prisma.timesheet.findMany({
       where: {
@@ -86,6 +91,20 @@ export async function GET(
       }
     })
 
+    // Get current year timesheets for yearly PLAWA tracking
+    const yearlyTimesheets = await prisma.timesheet.findMany({
+      where: {
+        userId: params.id,
+        periodStart: {
+          gte: yearStart,
+          lte: yearEnd
+        }
+      },
+      include: {
+        entries: true
+      }
+    })
+
     // Calculate metrics
     let totalHours = 0
     let totalPlawaHours = 0
@@ -95,6 +114,11 @@ export async function GET(
     let pendingTimesheets = 0
     let deniedTimesheets = 0
     let totalMessages = 0
+    
+    // Calculate yearly metrics
+    let yearlyTotalHours = 0
+    let yearlyPlawaHours = 0
+    let yearlyRegularHours = 0
     
     const monthlyData: any[] = []
     const weeklyData: any[] = []
@@ -167,6 +191,38 @@ export async function GET(
       }
     })
 
+    // Calculate yearly metrics from yearly timesheets
+    yearlyTimesheets.forEach(timesheet => {
+      let timesheetHours = 0
+      let timesheetPlawaHours = 0
+      let timesheetRegularHours = 0
+      
+      timesheet.entries.forEach(entry => {
+        let dailyHours = entry.plawaHours || 0
+        
+        // Calculate hours from in/out pairs
+        if (entry.in1 && entry.out1) {
+          dailyHours += (new Date(entry.out1).getTime() - new Date(entry.in1).getTime()) / (1000 * 60 * 60)
+        }
+        if (entry.in2 && entry.out2) {
+          dailyHours += (new Date(entry.out2).getTime() - new Date(entry.in2).getTime()) / (1000 * 60 * 60)
+        }
+        if (entry.in3 && entry.out3) {
+          dailyHours += (new Date(entry.out3).getTime() - new Date(entry.in3).getTime()) / (1000 * 60 * 60)
+        }
+        
+        const regularHours = dailyHours - (entry.plawaHours || 0)
+        
+        timesheetHours += dailyHours
+        timesheetPlawaHours += (entry.plawaHours || 0)
+        timesheetRegularHours += regularHours
+      })
+      
+      yearlyTotalHours += timesheetHours
+      yearlyPlawaHours += timesheetPlawaHours
+      yearlyRegularHours += timesheetRegularHours
+    })
+
     // Calculate daily averages
     Object.keys(dailyAverages).forEach(day => {
       dailyAverages[day].average = dailyAverages[day].total / dailyAverages[day].count
@@ -202,6 +258,13 @@ export async function GET(
         estimatedPlawaEarnings: Math.round(estimatedPlawaEarnings * 100) / 100,
         totalEstimatedEarnings: Math.round(totalEstimatedEarnings * 100) / 100
       },
+      yearlyStats: {
+        year: currentYear,
+        totalHours: Math.round(yearlyTotalHours * 100) / 100,
+        plawaHours: Math.round(yearlyPlawaHours * 100) / 100,
+        regularHours: Math.round(yearlyRegularHours * 100) / 100,
+        plawaPercentage: yearlyTotalHours > 0 ? Math.round((yearlyPlawaHours / yearlyTotalHours) * 100 * 100) / 100 : 0
+      },
       monthlyData: monthlyData.sort((a, b) => a.month.localeCompare(b.month)),
       dailyAverages,
       recentTimesheets: timesheets.slice(0, 10).map(ts => ({
@@ -209,6 +272,12 @@ export async function GET(
         periodStart: ts.periodStart,
         periodEnd: ts.periodEnd,
         state: ts.state,
+        staffSig: ts.staffSig,
+        staffSigAt: (ts as any).staffSigAt,
+        managerSig: ts.managerSig,
+        managerSigAt: (ts as any).managerSigAt,
+        hrSig: ts.hrSig,
+        hrSigAt: (ts as any).hrSigAt,
         totalHours: ts.entries.reduce((sum, entry) => {
           let dailyHours = entry.plawaHours || 0
           if (entry.in1 && entry.out1) {

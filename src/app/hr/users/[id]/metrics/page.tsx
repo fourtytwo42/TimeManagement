@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/lib/api-client'
 import { toast } from 'react-toastify'
 import { format } from 'date-fns'
+import jsPDF from 'jspdf'
+import 'jspdf-autotable'
 import { 
   ArrowLeft, 
   Clock, 
@@ -22,6 +24,13 @@ import {
   Mail,
   Printer
 } from 'lucide-react'
+
+// Extend jsPDF type to include autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF
+  }
+}
 
 interface UserMetrics {
   user: {
@@ -52,6 +61,13 @@ interface UserMetrics {
     estimatedPlawaEarnings: number
     totalEstimatedEarnings: number
   }
+  yearlyStats: {
+    year: number
+    totalHours: number
+    plawaHours: number
+    regularHours: number
+    plawaPercentage: number
+  }
   monthlyData: Array<{
     month: string
     monthName: string
@@ -70,6 +86,12 @@ interface UserMetrics {
     periodStart: string
     periodEnd: string
     state: string
+    staffSig?: string | null
+    staffSigAt?: string | null
+    managerSig?: string | null
+    managerSigAt?: string | null
+    hrSig?: string | null
+    hrSigAt?: string | null
     totalHours: number
     messagesCount: number
   }>
@@ -83,19 +105,37 @@ export default function UserMetricsPage() {
   const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState('12') // months
 
+  // Separate useEffect for auth check - only runs once when user is loaded
   useEffect(() => {
-    if (user?.role !== 'HR' && user?.role !== 'ADMIN') {
+    console.log('Auth check useEffect triggered. User:', user?.email, 'Role:', user?.role)
+    if (user && user.role !== 'HR' && user.role !== 'ADMIN') {
+      console.log('User does not have HR/ADMIN role, redirecting:', user.role)
       router.push('/hr')
-      return
     }
-    fetchMetrics()
-  }, [timeRange, params?.id])
+  }, [user?.role, router])
+
+  // Separate useEffect for data fetching - runs when params or timeRange changes
+  useEffect(() => {
+    console.log('Data fetch useEffect triggered. User role:', user?.role, 'Params ID:', params?.id, 'TimeRange:', timeRange)
+    if (user && (user.role === 'HR' || user.role === 'ADMIN') && params?.id) {
+      fetchMetrics()
+    } else if (user && params && !params.id) {
+      console.error('No user ID provided in params:', params)
+      toast.error('No user ID provided')
+    }
+  }, [timeRange, params?.id, user?.role])
 
   const fetchMetrics = async () => {
-    if (!params?.id) return
+    if (!params?.id) {
+      console.error('No user ID available for fetching metrics')
+      return
+    }
+    
+    console.log('Fetching metrics for user ID:', params.id, 'with timeRange:', timeRange)
     setLoading(true)
     try {
       const data = await apiClient.get(`/api/hr/users/${params.id}/metrics?months=${timeRange}`)
+      console.log('Metrics data received:', data)
       setMetrics(data)
     } catch (error) {
       console.error('Error fetching metrics:', error)
@@ -109,9 +149,82 @@ export default function UserMetricsPage() {
     window.print()
   }
 
+  const handlePDFExport = () => {
+    if (!metrics) return
+
+    const { user: targetUser, summary, yearlyStats, recentTimesheets } = metrics
+    
+    // Create new PDF document
+    const doc = new jsPDF()
+    
+    // Add title
+    doc.setFontSize(20)
+    doc.text('Employee Metrics Report', 20, 20)
+    
+    // Add employee info
+    doc.setFontSize(12)
+    doc.text(`Employee: ${targetUser.name}`, 20, 35)
+    doc.text(`Email: ${targetUser.email}`, 20, 45)
+    doc.text(`Role: ${targetUser.role}`, 20, 55)
+    doc.text(`Pay Rate: $${targetUser.payRate}/hour`, 20, 65)
+    doc.text(`Report Generated: ${format(new Date(), 'MMM d, yyyy h:mm a')}`, 20, 75)
+    
+    // Add yearly PLAWA stats
+    doc.setFontSize(14)
+    doc.text(`${yearlyStats.year} Year-to-Date PLAWA Usage`, 20, 95)
+    doc.setFontSize(10)
+    doc.text(`YTD Total Hours: ${yearlyStats.totalHours}`, 20, 105)
+    doc.text(`YTD PLAWA Hours: ${yearlyStats.plawaHours}`, 20, 115)
+    doc.text(`YTD Regular Hours: ${yearlyStats.regularHours}`, 20, 125)
+    doc.text(`YTD PLAWA Percentage: ${yearlyStats.plawaPercentage}%`, 20, 135)
+    
+    // Add summary section
+    doc.setFontSize(14)
+    doc.text('Period Summary', 20, 155)
+    doc.setFontSize(10)
+    doc.text(`Total Hours: ${summary.totalHours}`, 20, 165)
+    doc.text(`Regular Hours: ${summary.totalRegularHours}`, 20, 175)
+    doc.text(`PLAWA Hours: ${summary.totalPlawaHours}`, 20, 185)
+    doc.text(`Total Timesheets: ${summary.totalTimesheets}`, 20, 195)
+    doc.text(`Approval Rate: ${summary.approvalRate}%`, 20, 205)
+    doc.text(`Estimated Earnings: $${summary.totalEstimatedEarnings}`, 20, 215)
+    
+    // Add timesheet table
+    const tableData = recentTimesheets.map(ts => [
+      `${format(new Date(ts.periodStart), 'MMM d')} - ${format(new Date(ts.periodEnd), 'MMM d, yyyy')}`,
+      ts.state.replace('PENDING_', '').replace('_', ' '),
+      ts.totalHours.toFixed(1),
+      ts.staffSigAt ? format(new Date(ts.staffSigAt), 'MMM d, h:mm a') : 'Not signed',
+      ts.managerSigAt ? format(new Date(ts.managerSigAt), 'MMM d, h:mm a') : 'Not signed',
+      ts.hrSigAt ? format(new Date(ts.hrSigAt), 'MMM d, h:mm a') : 'Not signed',
+      ts.messagesCount.toString()
+    ])
+    
+    // Add table using autoTable plugin
+    doc.autoTable({
+      head: [['Period', 'Status', 'Hours', 'Staff Signed', 'Manager Signed', 'HR Signed', 'Messages']],
+      body: tableData,
+      startY: 230,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [59, 130, 246] },
+      columnStyles: {
+        0: { cellWidth: 30 },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 15 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 25 },
+        5: { cellWidth: 25 },
+        6: { cellWidth: 15 }
+      }
+    })
+    
+    // Save the PDF
+    doc.save(`${targetUser.name.replace(/\s+/g, '_')}_metrics_${format(new Date(), 'yyyy-MM-dd')}.pdf`)
+    toast.success('PDF exported successfully!')
+  }
+
   const handleEmailReport = () => {
-    // TODO: Implement email functionality
-    toast.info('Email functionality coming soon')
+    toast.info('Email report functionality coming soon!')
   }
 
   const getStatusColor = (state: string) => {
@@ -137,6 +250,15 @@ export default function UserMetricsPage() {
     )
   }
 
+  // Don't render anything until user is loaded to prevent premature redirects
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
+
   if (!metrics) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -153,15 +275,15 @@ export default function UserMetricsPage() {
     )
   }
 
-  const { user: targetUser, summary, monthlyData, dailyAverages, recentTimesheets } = metrics
+  const { user: targetUser, summary, yearlyStats, monthlyData, dailyAverages, recentTimesheets } = metrics
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8" id="metrics-content">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 no-print">
               <button
                 onClick={() => router.push('/hr')}
                 className="flex items-center text-gray-600 hover:text-gray-900"
@@ -170,7 +292,7 @@ export default function UserMetricsPage() {
                 Back to HR Dashboard
               </button>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 no-print">
               <select
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
@@ -189,8 +311,15 @@ export default function UserMetricsPage() {
                 Print
               </button>
               <button
-                onClick={handleEmailReport}
+                onClick={handlePDFExport}
                 className="flex items-center px-3 py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export PDF
+              </button>
+              <button
+                onClick={handleEmailReport}
+                className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
               >
                 <Mail className="w-4 h-4 mr-2" />
                 Email Report
@@ -212,6 +341,60 @@ export default function UserMetricsPage() {
               )}
               <span>•</span>
               <span>${targetUser.payRate}/hour</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Yearly PLAWA Stats */}
+        <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg shadow p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{yearlyStats.year} Year-to-Date PLAWA Usage</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Total Hours</p>
+                  <p className="text-2xl font-bold text-blue-600">{yearlyStats.totalHours}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">PLAWA Hours Used</p>
+                  <p className="text-2xl font-bold text-green-600">{yearlyStats.plawaHours}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Regular Hours</p>
+                  <p className="text-2xl font-bold text-gray-700">{yearlyStats.regularHours}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">PLAWA Percentage</p>
+                  <p className="text-2xl font-bold text-purple-600">{yearlyStats.plawaPercentage}%</p>
+                </div>
+              </div>
+            </div>
+            <div className="hidden md:block">
+              <div className="w-24 h-24 relative">
+                <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    stroke="#e5e7eb"
+                    strokeWidth="8"
+                    fill="none"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    stroke="#10b981"
+                    strokeWidth="8"
+                    fill="none"
+                    strokeDasharray={`${(yearlyStats.plawaPercentage / 100) * 251.2} 251.2`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-sm font-bold text-gray-700">{yearlyStats.plawaPercentage}%</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -372,6 +555,9 @@ export default function UserMetricsPage() {
                     Hours
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Signatures
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Messages
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -393,6 +579,31 @@ export default function UserMetricsPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {timesheet.totalHours.toFixed(1)}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-600">
+                      <div className="space-y-1">
+                        <div className="flex items-center">
+                          <span className={`w-2 h-2 rounded-full mr-2 ${timesheet.staffSig ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                          <span className="font-medium">Staff:</span>
+                          <span className="ml-1">
+                            {timesheet.staffSigAt ? format(new Date(timesheet.staffSigAt), 'MMM d, h:mm a') : 'Not signed'}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className={`w-2 h-2 rounded-full mr-2 ${timesheet.managerSig ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                          <span className="font-medium">Manager:</span>
+                          <span className="ml-1">
+                            {timesheet.managerSigAt ? format(new Date(timesheet.managerSigAt), 'MMM d, h:mm a') : 'Not signed'}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className={`w-2 h-2 rounded-full mr-2 ${timesheet.hrSig ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                          <span className="font-medium">HR:</span>
+                          <span className="ml-1">
+                            {timesheet.hrSigAt ? format(new Date(timesheet.hrSigAt), 'MMM d, h:mm a') : 'Not signed'}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex items-center">
                         <MessageSquare className="w-4 h-4 mr-1 text-gray-400" />
@@ -401,7 +612,7 @@ export default function UserMetricsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
-                        onClick={() => router.push(`/hr/timesheets/${timesheet.id}`)}
+                        onClick={() => router.push(`/hr/timesheet/${timesheet.id}`)}
                         className="text-primary-600 hover:text-primary-900"
                       >
                         View Details

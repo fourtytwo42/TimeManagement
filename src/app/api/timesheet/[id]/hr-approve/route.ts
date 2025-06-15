@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
 import { prisma } from '@/lib/db'
+import { createTimesheetNotification } from '@/lib/notifications'
+import { sendFinalApprovedTimesheetNotification, isEmailEnabled } from '@/lib/mailer'
+import { format } from 'date-fns'
 
 // Local constants to replace Prisma enums
 const TS_STATE = {
@@ -38,7 +41,10 @@ export async function POST(
 
     const timesheet = await prisma.timesheet.findUnique({
       where: { id: params.id },
-      include: { user: true }
+      include: { 
+        user: true,
+        entries: true
+      }
     })
 
     if (!timesheet) {
@@ -52,13 +58,71 @@ export async function POST(
       )
     }
 
-    const updatedTimesheet = await prisma.timesheet.update({
-      where: { id: params.id },
-      data: {
-        state: TS_STATE.APPROVED,
-        hrSig: signature,
-        updatedAt: new Date()
+    // Calculate timesheet totals for email
+    const totalHours = timesheet.entries.reduce((total, entry) => {
+      let dailyHours = entry.plawaHours || 0
+      if (entry.in1 && entry.out1) {
+        dailyHours += (new Date(entry.out1).getTime() - new Date(entry.in1).getTime()) / (1000 * 60 * 60)
       }
+      if (entry.in2 && entry.out2) {
+        dailyHours += (new Date(entry.out2).getTime() - new Date(entry.in2).getTime()) / (1000 * 60 * 60)
+      }
+      if (entry.in3 && entry.out3) {
+        dailyHours += (new Date(entry.out3).getTime() - new Date(entry.in3).getTime()) / (1000 * 60 * 60)
+      }
+      return total + dailyHours
+    }, 0)
+
+    const plawaHours = timesheet.entries.reduce((total, entry) => total + (entry.plawaHours || 0), 0)
+    const regularHours = totalHours - plawaHours
+
+    // Update timesheet with HR signature and timestamp
+    await prisma.$executeRaw`
+      UPDATE Timesheet 
+      SET state = ${TS_STATE.APPROVED}, 
+          hrSig = ${signature}, 
+          hrSigAt = ${new Date().toISOString()},
+          updatedAt = ${new Date().toISOString()}
+      WHERE id = ${params.id}
+    `
+
+    // Create notification for the timesheet owner
+    try {
+      await createTimesheetNotification(
+        timesheet.user.id,
+        'final_approval',
+        params.id
+      )
+    } catch (notificationError) {
+      console.error('Failed to create final approval notification:', notificationError)
+      // Don't fail the approval if notification fails
+    }
+
+    // Send email notification if enabled
+    try {
+      if (isEmailEnabled()) {
+        const timesheetPeriod = `${format(new Date(timesheet.periodStart), 'MMM dd, yyyy')} - ${format(new Date(timesheet.periodEnd), 'MMM dd, yyyy')}`
+        
+        await sendFinalApprovedTimesheetNotification(
+          timesheet.user.email,
+          timesheet.user.name,
+          timesheetPeriod,
+          Math.round(totalHours * 100) / 100,
+          Math.round(plawaHours * 100) / 100,
+          Math.round(regularHours * 100) / 100,
+          user.name
+        )
+        
+        console.log(`Final approval email sent to ${timesheet.user.email} for timesheet ${params.id}`)
+      }
+    } catch (emailError) {
+      console.error('Failed to send final approval email:', emailError)
+      // Don't fail the approval if email fails
+    }
+
+    // Fetch the updated timesheet
+    const updatedTimesheet = await prisma.timesheet.findUnique({
+      where: { id: params.id }
     })
 
     return NextResponse.json({

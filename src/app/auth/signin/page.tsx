@@ -189,20 +189,11 @@ export default function SignInPage() {
             <p className="text-xs text-gray-600 text-center">
               All demo accounts use the same password: <code className="bg-gray-200 px-1 rounded">password123</code>
             </p>
-            <div className="mt-2 text-xs text-gray-500 text-center">
-              <p><strong>Bob</strong> has a denied timesheet with manager feedback</p>
-              <p><strong>Alice</strong> has a timesheet pending manager approval</p>
-              <p><strong>Carol</strong> has a timesheet pending HR approval</p>
-            </div>
+
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center">
-          <p className="text-xs text-gray-500">
-            Secure timesheet management with digital signatures
-          </p>
-        </div>
+
       </div>
     </div>
   )

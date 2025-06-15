@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
 import { denyTimesheet } from '@/lib/timesheet'
+import { createTimesheetNotification, fulfillNotifications } from '@/lib/notifications'
+import { prisma } from '@/lib/db'
 
 export async function POST(
   request: NextRequest,
@@ -28,31 +30,46 @@ export async function POST(
     const { note } = body
 
     if (!note || note.trim() === '') {
-      return NextResponse.json(
-        { error: 'Denial reason is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Denial note is required' }, { status: 400 })
     }
 
-    const updatedTimesheet = await denyTimesheet(
-      params.id,
-      user.id,
-      note.trim()
-    )
+    const updatedTimesheet = await denyTimesheet(params.id, user.id, note)
+    
+    if (!updatedTimesheet) {
+      return NextResponse.json({ error: 'Failed to deny timesheet' }, { status: 400 })
+    }
 
-    return NextResponse.json({
-      message: 'Timesheet denied successfully',
-      timesheet: updatedTimesheet
+    // Get timesheet details for notifications
+    const timesheet = await prisma.timesheet.findUnique({
+      where: { id: params.id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
     })
+
+    if (timesheet) {
+      // Notify staff member of denial
+      await createTimesheetNotification(
+        timesheet.userId,
+        'denial',
+        params.id,
+        `Your timesheet was returned with the following note: ${note}`
+      )
+
+      // Fulfill manager approval notifications
+      await fulfillNotifications(user.id, params.id, 'timesheet_denied')
+    }
+
+    return NextResponse.json({ message: 'Timesheet denied successfully' })
   } catch (error) {
     console.error('Error denying timesheet:', error)
-    
-    if (error instanceof Error && error.message.includes('not found')) {
-      return NextResponse.json({ error: error.message }, { status: 404 })
-    }
-    
     return NextResponse.json(
-      { error: 'Failed to deny timesheet' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

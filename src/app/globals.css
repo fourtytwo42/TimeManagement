@@ -213,4 +213,196 @@
 
 .Toastify__toast--warning {
   @apply bg-yellow-50 text-yellow-800 border border-yellow-200;
+}
+
+/* Print styles */
+@media print {
+  /* Page setup */
+  @page {
+    size: A4 landscape;
+    margin: 0.5in;
+  }
+  
+  body {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+  }
+  
+  .print\:shadow-none {
+    box-shadow: none !important;
+  }
+  
+  .print\:border {
+    border: 1px solid !important;
+  }
+  
+  .print\:border-gray-300 {
+    border-color: #d1d5db !important;
+  }
+  
+  .print\:border-gray-400 {
+    border-color: #9ca3af !important;
+  }
+  
+  .print\:text-base {
+    font-size: 1rem !important;
+  }
+  
+  .print\:font-bold {
+    font-weight: 700 !important;
+  }
+  
+  .print\:gap-4 {
+    gap: 1rem !important;
+  }
+  
+  .print\:hidden {
+    display: none !important;
+  }
+  
+  .print\:text-black {
+    color: #000000 !important;
+  }
+  
+  .print\:bg-white {
+    background-color: #ffffff !important;
+  }
+  
+  .print\:max-h-12 {
+    max-height: 3rem !important;
+  }
+  
+  /* Hide action buttons when printing */
+  .print\:hide-actions,
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Ensure signatures are visible in print */
+  img[alt*="Signature"] {
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Timesheet table print optimizations */
+  .timesheet-table {
+    width: 100% !important;
+    font-size: 8px !important;
+  }
+  
+  .timesheet-table th,
+  .timesheet-table td {
+    padding: 2px 4px !important;
+    font-size: 8px !important;
+    border: 1px solid #000 !important;
+  }
+  
+  .timesheet-table th {
+    background-color: #f3f4f6 !important;
+    font-weight: bold !important;
+    text-align: center !important;
+  }
+  
+  .timesheet-table .date-column {
+    width: 12% !important;
+    min-width: 80px !important;
+  }
+  
+  .timesheet-table .time-column {
+    width: 8% !important;
+    min-width: 50px !important;
+    text-align: center !important;
+  }
+  
+  .timesheet-table .plawa-column {
+    width: 6% !important;
+    min-width: 40px !important;
+    text-align: center !important;
+  }
+  
+  .timesheet-table .total-column {
+    width: 8% !important;
+    min-width: 50px !important;
+    text-align: center !important;
+  }
+  
+  .timesheet-table .comments-column {
+    width: 20% !important;
+    min-width: 100px !important;
+  }
+  
+  /* Compact timesheet header for print */
+  .timesheet-header {
+    margin-bottom: 10px !important;
+  }
+  
+  .timesheet-header h3 {
+    font-size: 12px !important;
+    margin-bottom: 5px !important;
+  }
+  
+  .timesheet-header .signature-indicators {
+    font-size: 8px !important;
+  }
+  
+  .timesheet-header .totals {
+    font-size: 10px !important;
+  }
+  
+  /* Summary cards print layout */
+  .summary-cards {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 15px !important;
+  }
+  
+  .summary-card {
+    padding: 8px !important;
+    border: 1px solid #000 !important;
+    font-size: 9px !important;
+  }
+  
+  .summary-card h4 {
+    font-size: 10px !important;
+    margin-bottom: 3px !important;
+  }
+  
+  /* Signature section print layout */
+  .signatures-section {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 15px !important;
+  }
+  
+  .signature-box {
+    border: 1px solid #000 !important;
+    padding: 8px !important;
+    font-size: 8px !important;
+  }
+  
+  .signature-box img {
+    max-height: 30px !important;
+    width: auto !important;
+  }
+  
+  /* Force table to fit page width */
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+  
+  /* Ensure proper page breaks */
+  .page-break-before {
+    page-break-before: always !important;
+  }
+  
+  .page-break-after {
+    page-break-after: always !important;
+  }
+  
+  .page-break-inside-avoid {
+    page-break-inside: avoid !important;
+  }
 } 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
 import { submitTimesheet } from '@/lib/timesheet'
+import { createTimesheetNotification, createManagerApprovalNotification } from '@/lib/notifications'
+import { prisma } from '@/lib/db'
 
 export async function POST(
   request: NextRequest,
@@ -35,6 +37,43 @@ export async function POST(
       user.id,
       signature
     )
+
+    // Create notifications
+    try {
+      // Notify the staff member of successful submission
+      await createTimesheetNotification(
+        user.id,
+        'submission',
+        params.id
+      )
+
+      // Get timesheet details to notify manager
+      const timesheet = await prisma.timesheet.findUnique({
+        where: { id: params.id },
+        include: {
+          user: {
+            select: { 
+              name: true,
+              manager: {
+                select: { id: true }
+              }
+            }
+          }
+        }
+      })
+      
+      // Notify manager if they exist
+      if (timesheet?.user.manager?.id) {
+        await createManagerApprovalNotification(
+          timesheet.user.manager.id,
+          timesheet.user.name,
+          params.id
+        )
+      }
+    } catch (notificationError) {
+      console.error('Failed to create submission notifications:', notificationError)
+      // Don't fail the submission if notification fails
+    }
 
     return NextResponse.json({
       message: 'Timesheet submitted successfully',

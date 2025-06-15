@@ -17,8 +17,10 @@ model User {
   role      String   // 'STAFF', 'MANAGER', 'HR', 'ADMIN'
   password  String
   payRate   Float    @default(0.0)
+  payRateEffectiveDate DateTime? // When the current pay rate became effective
   managerId String?
   settings  String   @default("{}")
+  status    String   @default("ACTIVE") // 'ACTIVE', 'SUSPENDED', 'INACTIVE'
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -26,10 +28,29 @@ model User {
   manager           User?         @relation("UserManager", fields: [managerId], references: [id])
   directReports     User[]        @relation("UserManager")
   timesheets        Timesheet[]
-  sentMessages      Message[]     @relation("MessageSender")
-  receivedMessages  Message[]     @relation("MessageReceiver")
+
   timesheetMessages TimesheetMessage[]
   auditLogs         AuditLog[]
+  notifications     Notification[]
+  customReports     CustomReport[]
+  payRateHistory    PayRateHistory[]
+  emailConfigurations EmailConfiguration[]
+  notificationSettings NotificationSettings[]
+  timesheetTemplates TimesheetTemplate[]
+}
+
+model PayRateHistory {
+  id           String   @id @default(cuid())
+  userId       String
+  payRate      Float
+  effectiveDate DateTime
+  endDate      DateTime? // When this rate ended (null for current rate)
+  createdBy    String   // Who made the change
+  reason       String?  // Reason for the change
+  createdAt    DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Timesheet {
@@ -77,21 +98,6 @@ model TimesheetEntry {
   @@unique([timesheetId, date])
 }
 
-model Message {
-  id         String    @id @default(cuid())
-  senderId   String
-  receiverId String
-  subject    String
-  content    String
-  isRead     Boolean   @default(false)
-  readAt     DateTime?
-  createdAt  DateTime  @default(now())
-
-  // Relations
-  sender   User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-}
-
 model TimesheetMessage {
   id          String   @id @default(cuid())
   timesheetId String
@@ -117,4 +123,107 @@ model AuditLog {
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String
+  type       String
+  title      String
+  message    String
+  isRead     Boolean  @default(false)
+  resourceId String?
+  createdAt  DateTime @default(now())
+  readAt     DateTime?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CustomReport {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdBy   String
+  config      String   // JSON string containing report configuration
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+}
+
+model EmailConfiguration {
+  id                String   @id @default(cuid())
+  smtpHost          String
+  smtpPort          Int
+  smtpSecure        Boolean  @default(true)
+  smtpUser          String
+  smtpPassword      String   // Encrypted
+  fromEmail         String
+  fromName          String
+  isEnabled         Boolean  @default(false)
+  testEmailSent     Boolean  @default(false)
+  lastTestAt        DateTime?
+  createdBy         String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+}
+
+model NotificationSettings {
+  id                        String   @id @default(cuid())
+  timesheetSubmissionEnabled Boolean  @default(true)
+  timesheetApprovalEnabled   Boolean  @default(true)
+  timesheetDenialEnabled     Boolean  @default(true)
+  timesheetFinalApprovalEnabled Boolean @default(true)
+  timesheetMessageEnabled    Boolean  @default(true)
+  userAccountEnabled         Boolean  @default(true)
+  reportDeliveryEnabled      Boolean  @default(true)
+  systemAlertsEnabled        Boolean  @default(true)
+  createdBy                 String
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  // Relations
+  creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+}
+
+model TimesheetTemplate {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  patterns TimesheetTemplatePattern[]
+
+  @@unique([userId, name])
+}
+
+model TimesheetTemplatePattern {
+  id         String   @id @default(cuid())
+  templateId String
+  dayType    String   // 'WEEKDAY', 'SATURDAY', 'SUNDAY'
+  in1        String?  // Time in HH:MM format
+  out1       String?
+  in2        String?
+  out2       String?
+  in3        String?
+  out3       String?
+  comments   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  template TimesheetTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, dayType])
 }

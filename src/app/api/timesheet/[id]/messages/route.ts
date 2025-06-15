@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
 import { prisma } from '@/lib/db'
-import { sendTimesheetNotification, isEmailEnabled } from '@/lib/mailer'
+import { createTimesheetMessageNotification, fulfillNotifications } from '@/lib/notifications'
 
 // Local constants to replace Prisma enums
 const ROLES = {
@@ -28,13 +28,12 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Check if user has access to this timesheet
+    // Verify user has access to this timesheet
     const timesheet = await prisma.timesheet.findUnique({
       where: { id: params.id },
       include: {
         user: {
           select: {
-            id: true,
             managerId: true
           }
         }
@@ -45,20 +44,22 @@ export async function GET(
       return NextResponse.json({ error: 'Timesheet not found' }, { status: 404 })
     }
 
-    // Check permissions
-    const canAccess = 
+    // Check access permissions
+    const hasAccess = 
       timesheet.userId === user.id || // Owner
       timesheet.user.managerId === user.id || // Manager
-      user.role === 'HR' || 
-      user.role === 'ADMIN'
+      user.role === 'HR' || // HR
+      user.role === 'ADMIN' // Admin
 
-    if (!canAccess) {
+    if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    // Get messages for this timesheet
+    // Fetch messages
     const messages = await prisma.timesheetMessage.findMany({
-      where: { timesheetId: params.id },
+      where: {
+        timesheetId: params.id
+      },
       include: {
         sender: {
           select: {
@@ -68,7 +69,9 @@ export async function GET(
           }
         }
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: {
+        createdAt: 'asc'
+      }
     })
 
     return NextResponse.json(messages)
@@ -99,22 +102,28 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const { content } = await request.json()
+    const body = await request.json()
+    const { content } = body
 
-    if (!content || !content.trim()) {
+    if (!content || content.trim() === '') {
       return NextResponse.json({ error: 'Message content is required' }, { status: 400 })
     }
 
-    // Check if user has access to this timesheet
+    // Verify user has access to this timesheet
     const timesheet = await prisma.timesheet.findUnique({
       where: { id: params.id },
       include: {
         user: {
           select: {
             id: true,
-            managerId: true,
             name: true,
-            email: true
+            managerId: true,
+            manager: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
           }
         }
       }
@@ -124,14 +133,14 @@ export async function POST(
       return NextResponse.json({ error: 'Timesheet not found' }, { status: 404 })
     }
 
-    // Check permissions
-    const canAccess = 
+    // Check access permissions
+    const hasAccess = 
       timesheet.userId === user.id || // Owner
       timesheet.user.managerId === user.id || // Manager
-      user.role === 'HR' || 
-      user.role === 'ADMIN'
+      user.role === 'HR' || // HR
+      user.role === 'ADMIN' // Admin
 
-    if (!canAccess) {
+    if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -153,33 +162,39 @@ export async function POST(
       }
     })
 
-    // Send email notifications if enabled
-    if (isEmailEnabled()) {
-      try {
-        // Notify timesheet owner if message is from manager/HR
-        if (timesheet.userId !== user.id) {
-          await sendTimesheetNotification({
-            userId: timesheet.userId,
-            timesheetId: params.id,
-            type: 'submission',
-            message: `New message from ${user.name} on your timesheet for ${new Date(timesheet.periodStart).toLocaleDateString()} - ${new Date(timesheet.periodEnd).toLocaleDateString()}`
-          })
-        }
-
-        // Notify manager if message is from staff
-        if (timesheet.user.managerId && timesheet.user.managerId !== user.id && user.role === 'STAFF') {
-          await sendTimesheetNotification({
-            userId: timesheet.user.managerId,
-            timesheetId: params.id,
-            type: 'submission',
-            message: `New message from ${user.name} on timesheet for ${timesheet.user.name}`
-          })
-        }
-      } catch (emailError) {
-        console.error('Failed to send email notification:', emailError)
-        // Don't fail the request if email fails
+    // Send notifications to relevant users
+    const recipients = new Set<string>()
+    
+    // Always notify the timesheet owner (if not the sender)
+    if (timesheet.userId !== user.id) {
+      recipients.add(timesheet.userId)
+    }
+    
+    // Notify the manager (if not the sender and exists)
+    if (timesheet.user.managerId && timesheet.user.managerId !== user.id) {
+      recipients.add(timesheet.user.managerId)
+    }
+    
+    // If sender is HR, notify both staff and manager
+    if (user.role === 'HR' || user.role === 'ADMIN') {
+      recipients.add(timesheet.userId)
+      if (timesheet.user.managerId) {
+        recipients.add(timesheet.user.managerId)
       }
     }
+
+    // Send notifications
+    for (const recipientId of Array.from(recipients)) {
+      await createTimesheetMessageNotification(
+        recipientId,
+        user.name,
+        params.id,
+        content.trim()
+      )
+    }
+
+    // Fulfill message notifications for the sender
+    await fulfillNotifications(user.id, params.id, 'message_sent')
 
     return NextResponse.json(message, { status: 201 })
   } catch (error) {

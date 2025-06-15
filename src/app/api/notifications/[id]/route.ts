@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
-import { getTimesheetById } from '@/lib/timesheet'
-import { fulfillNotifications } from '@/lib/notifications'
+import { prisma } from '@/lib/db'
 
-export async function GET(
+export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -21,20 +20,28 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const timesheet = await getTimesheetById(params.id, user.id, user.role)
+    // Check if notification exists and belongs to user
+    const notification = await prisma.notification.findFirst({
+      where: {
+        id: params.id,
+        userId: user.id
+      }
+    })
 
-    if (!timesheet) {
-      return NextResponse.json({ error: 'Timesheet not found' }, { status: 404 })
+    if (!notification) {
+      return NextResponse.json({ error: 'Notification not found' }, { status: 404 })
     }
 
-    // Fulfill notifications when user views the timesheet
-    await fulfillNotifications(user.id, params.id, 'timesheet_viewed')
-    
-    return NextResponse.json(timesheet)
+    // Delete notification
+    await prisma.notification.delete({
+      where: { id: params.id }
+    })
+
+    return NextResponse.json({ message: 'Notification deleted successfully' })
   } catch (error) {
-    console.error('Error fetching timesheet:', error)
+    console.error('Error deleting notification:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch timesheet' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

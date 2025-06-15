@@ -182,7 +182,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, email, name, role, managerId, payRate, password } = body
+    const { id, email, name, role, managerId, payRate, payRateEffectiveDate, status, password } = body
 
     if (!id) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
@@ -246,8 +246,44 @@ export async function PUT(request: NextRequest) {
     if (email) updateData.email = email
     if (name) updateData.name = name
     if (role) updateData.role = role
+    if (status) updateData.status = status
     if (managerId !== undefined) updateData.managerId = managerId || null
-    if (payRate !== undefined) updateData.payRate = parseFloat(payRate)
+    
+    // Handle pay rate changes with effective date
+    if (payRate !== undefined) {
+      const newPayRate = parseFloat(payRate)
+      const effectiveDate = payRateEffectiveDate ? new Date(payRateEffectiveDate) : new Date()
+      
+      // Only update if pay rate actually changed
+      if (newPayRate !== existingUser.payRate) {
+        // Create pay rate history entry for the old rate (end it)
+        if (existingUser.payRate > 0) {
+          await (prisma as any).payRateHistory.updateMany({
+            where: {
+              userId: id,
+              endDate: null // Current active rate
+            },
+            data: {
+              endDate: effectiveDate
+            }
+          })
+        }
+        
+        // Create new pay rate history entry
+        await (prisma as any).payRateHistory.create({
+          data: {
+            userId: id,
+            payRate: newPayRate,
+            effectiveDate: effectiveDate,
+            createdBy: user.id,
+            reason: 'HR Update'
+          }
+        })
+        
+        updateData.payRate = newPayRate
+        updateData.payRateEffectiveDate = effectiveDate
+      }
+    }
     
     // Hash new password if provided
     if (password) {

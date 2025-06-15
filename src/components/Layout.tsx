@@ -18,7 +18,8 @@ import {
   Home,
   User
 } from 'lucide-react'
-import MessageNotification from './MessageNotification'
+import NotificationDropdown from './NotificationDropdown'
+
 
 // Define role constants to avoid Prisma client issues
 const ROLES = {
@@ -49,42 +50,13 @@ export default function Layout({ children }: LayoutProps) {
     router.push('/auth/signin')
   }
 
+  // Simplified navigation - only Dashboard for all roles
   const navigation = [
     {
       name: 'Dashboard',
       href: `/${user.role.toLowerCase()}`,
       icon: Home,
       roles: [ROLES.STAFF, ROLES.MANAGER, ROLES.HR, ROLES.ADMIN]
-    },
-    {
-      name: 'My Timesheet',
-      href: '/staff',
-      icon: Clock,
-      roles: [ROLES.STAFF]
-    },
-    {
-      name: 'Approvals',
-      href: '/manager',
-      icon: CheckCircle,
-      roles: [ROLES.MANAGER]
-    },
-    {
-      name: 'HR Dashboard',
-      href: '/hr',
-      icon: Users,
-      roles: [ROLES.HR, ROLES.ADMIN]
-    },
-    {
-      name: 'Reports',
-      href: '/hr?tab=reports',
-      icon: FileText,
-      roles: [ROLES.HR, ROLES.ADMIN]
-    },
-    {
-      name: 'Settings',
-      href: '/hr?tab=settings',
-      icon: Settings,
-      roles: [ROLES.HR, ROLES.ADMIN]
     }
   ]
 
@@ -99,40 +71,6 @@ export default function Layout({ children }: LayoutProps) {
     }
     return pathname.startsWith(href.split('?')[0])
   }
-
-  const getNavItems = () => {
-    if (!user) return []
-
-    const baseItems = [
-      { href: '/', label: 'Dashboard', icon: Clock },
-    ]
-
-    switch (user.role) {
-      case 'STAFF':
-        return [
-          ...baseItems,
-          { href: '/staff', label: 'My Timesheet', icon: Clock },
-        ]
-      case 'MANAGER':
-        return [
-          ...baseItems,
-          { href: '/staff', label: 'My Timesheet', icon: Clock },
-          { href: '/manager', label: 'Approvals', icon: FileText },
-        ]
-      case 'HR':
-      case 'ADMIN':
-        return [
-          ...baseItems,
-          { href: '/staff', label: 'My Timesheet', icon: Clock },
-          { href: '/manager', label: 'Manager View', icon: FileText },
-          { href: '/hr', label: 'HR Dashboard', icon: Users },
-        ]
-      default:
-        return baseItems
-    }
-  }
-
-  const navItems = getNavItems()
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -267,10 +205,7 @@ export default function Layout({ children }: LayoutProps) {
               </div>
               
               <div className="flex items-center space-x-2">
-                <MessageNotification />
-                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200">
-                  <Bell className="h-5 w-5" />
-                </button>
+                <NotificationDropdown />
               </div>
             </div>
           </div>
