@@ -3,17 +3,16 @@
 const { execSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
+const { killNodeProcesses, getPlatformInfo, safeExecSync } = require('./utils')
 
 console.log('🔧 Temporary SQLite Fix')
 console.log('=======================')
 
+const platformInfo = getPlatformInfo()
+console.log(`🖥️  Platform: ${platformInfo.platform}`)
+
 // Kill any running Node processes
-try {
-  console.log('🔪 Killing Node processes...')
-  execSync('taskkill /F /IM node.exe', { stdio: 'ignore' })
-} catch (error) {
-  console.log('ℹ️  No Node processes to kill')
-}
+killNodeProcesses()
 
 // Remove database files
 const dbFiles = ['dev.db', 'dev.db-journal', 'dev.db-wal']
@@ -50,9 +49,9 @@ if (fs.existsSync(envPath)) {
 console.log('\n🔄 Regenerating database...')
 
 try {
-  execSync('npx prisma generate', { stdio: 'inherit' })
-  execSync('npx prisma db push --force-reset', { stdio: 'inherit' })
-  execSync('npx prisma db seed', { stdio: 'inherit' })
+  safeExecSync('npx prisma generate')
+  safeExecSync('npx prisma db push --force-reset')
+  safeExecSync('npx prisma db seed')
   
   console.log('\n✅ SQLite database reset successfully!')
   console.log('🚀 You can now run: npm run dev')

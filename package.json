@@ -10,6 +10,12 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "jest",
+    "setup": "node scripts/setup.js",
+    "setup:verify": "node scripts/verify-setup.js",
+    "setup:permissions": "node scripts/set-permissions.js",
+    "upgrade:deps": "node scripts/upgrade-deps.js",
+    "fix:warnings": "node scripts/fix-deprecation-warnings.js",
+    "postinstall": "node scripts/setup.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
@@ -52,7 +58,7 @@
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "0.441.0",
-    "next": "14.2.5",
+    "next": "15.1.2",
     "next-auth": "4.24.11",
     "node-cron": "4.1.0",
     "node-fetch": "^3.3.2",
@@ -78,24 +84,48 @@
     "zod": "3.25.64"
   },
   "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@next/eslint-plugin-next": "^15.1.2",
     "@testing-library/jest-dom": "6.5.0",
     "@testing-library/react": "16.0.1",
     "@types/node-cron": "3.0.11",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
     "autoprefixer": "^10.4.20",
-    "eslint": "8.57.0",
-    "eslint-config-next": "14.2.5",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "15.1.2",
+    "eslint-plugin-react-hooks": "^5.0.0",
     "husky": "9.1.4",
     "jest": "29.7.0",
     "jest-environment-jsdom": "29.7.0",
     "lint-staged": "15.2.8",
+    "lru-cache": "^11.0.2",
     "postcss": "^8.4.41",
     "prettier": "3.3.3",
-    "tsx": "4.19.1"
+    "tsx": "4.19.1",
+    "glob": "^11.0.0"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
       "prettier --write",
       "eslint --fix"
     ]
+  },
+  "overrides": {
+    "eslint": "^9.17.0",
+    "@humanwhocodes/config-array": "npm:@eslint/config-array@^0.18.0",
+    "@humanwhocodes/object-schema": "npm:@eslint/object-schema@^2.1.4",
+    "rimraf": "^6.0.1",
+    "glob": "^11.0.0",
+    "inflight": "npm:lru-cache@^11.0.0",
+    "graceful-fs": "^4.2.11",
+    "minimatch": "^10.0.0"
+  },
+  "resolutions": {
+    "glob": "^11.0.0",
+    "inflight": "lru-cache",
+    "abab": false,
+    "domexception": false,
+    "node-domexception": false
   }
 }

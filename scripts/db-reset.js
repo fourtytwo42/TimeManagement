@@ -1,6 +1,7 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { killNodeProcesses, safeExecSync } = require('./utils');
 
 console.log('🔄 Starting comprehensive database reset...');
 
@@ -24,15 +25,9 @@ function runCommand(command, description) {
   }
 }
 
-// Function to kill Node processes
-function killNodeProcesses() {
-  try {
-    console.log('🔄 Killing Node processes...');
-    execSync('taskkill /F /IM node.exe', { stdio: 'ignore' });
-    console.log('✅ Node processes terminated');
-  } catch (error) {
-    console.log('ℹ️  No Node processes to kill or already terminated');
-  }
+// Function to kill Node processes (now using cross-platform utility)
+function killProcesses() {
+  killNodeProcesses();
 }
 
 // Function to check if database file exists and remove if corrupted
@@ -69,7 +64,7 @@ async function main() {
   console.log('=====================================');
   
   // Step 1: Kill Node processes
-  killNodeProcesses();
+  killProcesses();
   
   // Step 2: Wait a moment for processes to fully terminate
   console.log('⏳ Waiting for processes to terminate...');

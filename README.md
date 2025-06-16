@@ -95,45 +95,63 @@ src/
 - Node.js 18+ 
 - npm or yarn
 
+**Supported Platforms**: Windows, Linux, macOS
+
+**Note**: This project features **zero-configuration setup**! Just clone and run `npm install` - everything else is automated across all platforms.
+
 ### **Installation**
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd TimeManagement
-   ```
+**🚀 One-Command Setup** (Recommended):
+```bash
+git clone <repository-url>
+cd TimeManagement
+npm install
+```
+That's it! The `npm install` automatically:
+- ✅ Creates `.env.local` with development defaults
+- ✅ Generates Prisma client
+- ✅ Creates SQLite database with schema  
+- ✅ Seeds test user accounts
+- ✅ Creates necessary directories
+- ✅ Modern ESLint 9 with flat config (no more deprecation warnings!)
+- ✅ Ready to run!
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+**Manual Setup** (Alternative):
+```bash
+git clone <repository-url>
+cd TimeManagement
+npm install --ignore-scripts  # Skip automatic setup
+npm run setup                 # Run setup manually
+```
 
-3. **Set up environment variables**
-   ```bash
-   # Copy the example environment file
-   cp .env.example .env.local
-   
-   # Edit .env.local with your configuration
-   DATABASE_URL="file:./prisma/dev.db"
-   NEXTAUTH_SECRET="your-secret-key"
-   NEXTAUTH_URL="http://localhost:3000"
-   ```
+**Start the application**:
+```bash
+npm run dev
+```
 
-4. **Initialize the database**
-   ```bash
-   npx prisma generate
-   npx prisma db push
-   npx prisma db seed
-   ```
+**Access the application**:
+- Open [http://localhost:3000](http://localhost:3000)
+- Use the seeded test accounts (see below)
 
-5. **Start the development server**
-   ```bash
-   npm run dev
-   ```
+**Re-setup** (if needed):
+```bash
+npm run setup --force
+```
 
-6. **Access the application**
-   - Open [http://localhost:3000](http://localhost:3000)
-   - Use the seeded test accounts (see below)
+**Fix Deprecation Warnings** (if any remain):
+```bash
+npm run fix:warnings
+```
+
+**Linux/Unix Notes**:
+- Script permissions are automatically set during setup
+- Uses `pkill` instead of `taskkill` for process management
+- All paths use forward slashes (handled by Node.js `path` module)
+
+**Manual permission fix** (if needed on Linux):
+```bash
+npm run setup:permissions
+```
 
 ### **Test Accounts**
 
