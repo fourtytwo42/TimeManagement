@@ -7,6 +7,7 @@ interface AuthContextType {
   user: AuthUser | null
   token: string | null
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  loginWithToken: (user: AuthUser, token: string) => void
   logout: () => void
   isLoading: boolean
   isAuthenticated: boolean
@@ -142,6 +143,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  const loginWithToken = (user: AuthUser, token: string) => {
+    // Store in localStorage
+    localStorage.setItem('auth_token', token)
+    localStorage.setItem('auth_user', JSON.stringify(user))
+    
+    // Update state
+    setToken(token)
+    setUser(user)
+  }
+
   const logout = () => {
     // Clear localStorage
     localStorage.removeItem('auth_token')
@@ -156,6 +167,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     token,
     login,
+    loginWithToken,
     logout,
     isLoading,
     isAuthenticated: !!user && !!token

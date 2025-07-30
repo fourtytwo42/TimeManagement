@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { User, Lock, Mail, Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
 import { toast } from 'react-toastify'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -19,6 +20,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState(0)
   const router = useRouter()
+  const { loginWithToken } = useAuth()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -93,9 +95,26 @@ export default function RegisterPage() {
         role: formData.role
       })
 
-      if (response.success) {
-        toast.success('Registration successful! Please sign in.')
-        router.push('/auth/signin')
+      if (response.success && response.user && response.token) {
+        // Automatically log the user in
+        loginWithToken(response.user, response.token)
+        
+        toast.success('Registration successful! Welcome to TimeManagement!')
+        
+        // Redirect to appropriate dashboard based on role
+        switch (response.user.role) {
+          case 'HR':
+          case 'ADMIN':
+            router.push('/hr')
+            break
+          case 'MANAGER':
+            router.push('/manager')
+            break
+          case 'STAFF':
+          default:
+            router.push('/staff')
+            break
+        }
       } else {
         toast.error(response.error || 'Registration failed')
       }
