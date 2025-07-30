@@ -174,23 +174,23 @@ class MailerService {
     messageContent: string
   ): Promise<boolean> {
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
-          <h2 style="color: #333; margin-bottom: 20px;">New Timesheet Message</h2>
+      <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+        <div style='background-color: #f8f9fa; padding: 20px; border-radius: 8px;'>
+          <h2 style='color: #333; margin-bottom: 20px;'>New Timesheet Message</h2>
           
           <p>Hi ${recipientName},</p>
           
           <p>You have received a new message on your timesheet for the period <strong>${timesheetPeriod}</strong>.</p>
           
-          <div style="background-color: white; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0;">
+          <div style='background-color: white; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0;'>
             <p><strong>From:</strong> ${senderName}</p>
             <p><strong>Message:</strong></p>
-            <p style="font-style: italic;">"${messageContent}"</p>
+            <p style='font-style: italic;'>'${messageContent}'</p>
           </div>
           
           <p>Please log in to your timesheet system to view the full conversation and respond if needed.</p>
           
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px;">
+          <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px;'>
             <p>This is an automated notification from the Timesheet Management System.</p>
           </div>
         </div>
@@ -226,14 +226,14 @@ class MailerService {
     }
 
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
-          <h2 style="color: #333; margin-bottom: 20px;">Timesheet Status Update</h2>
+      <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+        <div style='background-color: #f8f9fa; padding: 20px; border-radius: 8px;'>
+          <h2 style='color: #333; margin-bottom: 20px;'>Timesheet Status Update</h2>
           
           <p>Hi ${recipientName},</p>
           
-          <div style="background-color: white; padding: 20px; border-left: 4px solid ${statusColors[status as keyof typeof statusColors]}; margin: 20px 0;">
-            <h3 style="color: ${statusColors[status as keyof typeof statusColors]}; margin-top: 0;">
+          <div style='background-color: white; padding: 20px; border-left: 4px solid ${statusColors[status as keyof typeof statusColors]}; margin: 20px 0;'>
+            <h3 style='color: ${statusColors[status as keyof typeof statusColors]}; margin-top: 0;'>
               ${statusMessages[status as keyof typeof statusMessages]}
             </h3>
             <p><strong>Timesheet Period:</strong> ${timesheetPeriod}</p>
@@ -243,7 +243,7 @@ class MailerService {
           
           <p>Please log in to your timesheet system to view the details.</p>
           
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px;">
+          <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px;'>
             <p>This is an automated notification from the Timesheet Management System.</p>
           </div>
         </div>
@@ -268,15 +268,15 @@ class MailerService {
     filename: string
   ): Promise<boolean> {
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
-          <h2 style="color: #333; margin-bottom: 20px;">Timesheet Report</h2>
+      <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+        <div style='background-color: #f8f9fa; padding: 20px; border-radius: 8px;'>
+          <h2 style='color: #333; margin-bottom: 20px;'>Timesheet Report</h2>
           
           <p>Hi ${recipientName},</p>
           
           <p>Your requested ${reportType} report is attached to this email.</p>
           
-          <div style="background-color: white; padding: 15px; border-left: 4px solid #28a745; margin: 20px 0;">
+          <div style='background-color: white; padding: 15px; border-left: 4px solid #28a745; margin: 20px 0;'>
             <p><strong>Report Type:</strong> ${reportType}</p>
             <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
             <p><strong>Filename:</strong> ${filename}</p>
@@ -284,7 +284,7 @@ class MailerService {
           
           <p>Please find the report attached as a ${filename.split('.').pop()?.toUpperCase()} file.</p>
           
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px;">
+          <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px;'>
             <p>This is an automated notification from the Timesheet Management System.</p>
           </div>
         </div>
@@ -312,14 +312,14 @@ class MailerService {
     approvedBy: string
   ): Promise<boolean> {
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
-          <h2 style="color: #333; margin-bottom: 20px;">🎉 Timesheet Fully Approved!</h2>
+      <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+        <div style='background-color: #f8f9fa; padding: 20px; border-radius: 8px;'>
+          <h2 style='color: #333; margin-bottom: 20px;'>🎉 Timesheet Fully Approved!</h2>
           
           <p>Hi ${recipientName},</p>
           
-          <div style="background-color: white; padding: 20px; border-left: 4px solid #28a745; margin: 20px 0;">
-            <h3 style="color: #28a745; margin-top: 0;">
+          <div style='background-color: white; padding: 20px; border-left: 4px solid #28a745; margin: 20px 0;'>
+            <h3 style='color: #28a745; margin-top: 0;'>
               Your timesheet has been fully approved and is now final!
             </h3>
             <p><strong>Timesheet Period:</strong> ${timesheetPeriod}</p>
@@ -327,20 +327,20 @@ class MailerService {
             <p><strong>Approval Date:</strong> ${new Date().toLocaleDateString()}</p>
           </div>
           
-          <div style="background-color: #e8f5e8; padding: 15px; border-radius: 6px; margin: 20px 0;">
-            <h4 style="color: #155724; margin-top: 0;">Hours Summary:</h4>
-            <table style="width: 100%; border-collapse: collapse;">
+          <div style='background-color: #e8f5e8; padding: 15px; border-radius: 6px; margin: 20px 0;'>
+            <h4 style='color: #155724; margin-top: 0;'>Hours Summary:</h4>
+            <table style='width: 100%; border-collapse: collapse;'>
               <tr>
-                <td style="padding: 5px 0; border-bottom: 1px solid #c3e6c3;"><strong>Total Hours:</strong></td>
-                <td style="padding: 5px 0; border-bottom: 1px solid #c3e6c3; text-align: right;">${totalHours.toFixed(2)}</td>
+                <td style='padding: 5px 0; border-bottom: 1px solid #c3e6c3;'><strong>Total Hours:</strong></td>
+                <td style='padding: 5px 0; border-bottom: 1px solid #c3e6c3; text-align: right;'>${totalHours.toFixed(2)}</td>
               </tr>
               <tr>
-                <td style="padding: 5px 0; border-bottom: 1px solid #c3e6c3;">Regular Hours:</td>
-                <td style="padding: 5px 0; border-bottom: 1px solid #c3e6c3; text-align: right;">${regularHours.toFixed(2)}</td>
+                <td style='padding: 5px 0; border-bottom: 1px solid #c3e6c3;'>Regular Hours:</td>
+                <td style='padding: 5px 0; border-bottom: 1px solid #c3e6c3; text-align: right;'>${regularHours.toFixed(2)}</td>
               </tr>
               <tr>
-                <td style="padding: 5px 0;">PLAWA Hours:</td>
-                <td style="padding: 5px 0; text-align: right;">${plawaHours.toFixed(2)}</td>
+                <td style='padding: 5px 0;'>PLAWA Hours:</td>
+                <td style='padding: 5px 0; text-align: right;'>${plawaHours.toFixed(2)}</td>
               </tr>
             </table>
           </div>
@@ -349,7 +349,7 @@ class MailerService {
           
           <p>You can view the final approved timesheet by logging into the system.</p>
           
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px;">
+          <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px;'>
             <p>This is an automated notification from the Timesheet Management System.</p>
             <p>If you have any questions about your timesheet, please contact HR.</p>
           </div>
@@ -385,25 +385,25 @@ class MailerService {
     }
 
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
-          <h2 style="color: #333; margin-bottom: 20px;">Account Notification</h2>
+      <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+        <div style='background-color: #f8f9fa; padding: 20px; border-radius: 8px;'>
+          <h2 style='color: #333; margin-bottom: 20px;'>Account Notification</h2>
           
           <p>Hi ${recipientName},</p>
           
-          <div style="background-color: white; padding: 20px; border-left: 4px solid ${actionColors[action]}; margin: 20px 0;">
-            <h3 style="color: ${actionColors[action]}; margin-top: 0;">
+          <div style='background-color: white; padding: 20px; border-left: 4px solid ${actionColors[action]}; margin: 20px 0;'>
+            <h3 style='color: ${actionColors[action]}; margin-top: 0;'>
               ${actionMessages[action]}
             </h3>
             ${temporaryPassword ? `
               <p><strong>Temporary Password:</strong> ${temporaryPassword}</p>
-              <p style="color: #dc3545; font-weight: bold;">Please change your password after your first login.</p>
+              <p style='color: #dc3545; font-weight: bold;'>Please change your password after your first login.</p>
             ` : ''}
           </div>
           
           ${action !== 'deleted' ? '<p>Please log in to your timesheet system to access your account.</p>' : ''}
           
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px;">
+          <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px;'>
             <p>This is an automated notification from the Timesheet Management System.</p>
           </div>
         </div>
@@ -433,8 +433,7 @@ export const sendFinalApprovedTimesheetNotification = (
   totalHours: number,
   plawaHours: number,
   regularHours: number,
-  approvedBy: string
-) => mailerService.sendFinalApprovedTimesheetNotification(
+  approvedBy: string) => mailerService.sendFinalApprovedTimesheetNotification(
   recipientEmail,
   recipientName,
   timesheetPeriod,
@@ -564,13 +563,13 @@ export const testEmailConfiguration = async (): Promise<boolean> => {
     await mailerService.refreshConfiguration()
 
     const testHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
-          <h2 style="color: #333; margin-bottom: 20px;">Email Configuration Test</h2>
+      <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+        <div style='background-color: #f8f9fa; padding: 20px; border-radius: 8px;'>
+          <h2 style='color: #333; margin-bottom: 20px;'>Email Configuration Test</h2>
           
           <p>This is a test email to verify your email configuration is working correctly.</p>
           
-          <div style="background-color: white; padding: 15px; border-left: 4px solid #28a745; margin: 20px 0;">
+          <div style='background-color: white; padding: 15px; border-left: 4px solid #28a745; margin: 20px 0;'>
             <p><strong>SMTP Host:</strong> ${emailConfig.smtpHost}</p>
             <p><strong>SMTP Port:</strong> ${emailConfig.smtpPort}</p>
             <p><strong>SMTP Secure:</strong> ${emailConfig.smtpSecure ? 'Yes' : 'No'}</p>
@@ -580,7 +579,7 @@ export const testEmailConfiguration = async (): Promise<boolean> => {
           
           <p>If you received this email, your configuration is working correctly!</p>
           
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px;">
+          <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px;'>
             <p>Test sent at: ${new Date().toLocaleString()}</p>
             <p>This is an automated test from the Timesheet Management System.</p>
           </div>

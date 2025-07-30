@@ -227,3 +227,10 @@ model TimesheetTemplatePattern {
 
   @@unique([templateId, dayType])
 }
+
+model SystemSettings {
+  id        Int      @id @default(1)
+  config    String   // JSON string containing all system settings
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

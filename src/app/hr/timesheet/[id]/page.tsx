@@ -9,19 +9,7 @@ import { TimesheetWithEntries } from '@/lib/timesheet'
 import TimesheetGrid from '@/components/TimesheetGrid'
 import TimesheetComments from '@/components/TimesheetComments'
 import SignatureModal from '@/components/SignatureModal'
-import { 
-  ArrowLeft, 
-  CheckCircle, 
-  XCircle, 
-  Download, 
-  Mail, 
-  Printer,
-  FileText,
-  Clock,
-  User,
-  UserCheck,
-  Calendar
-} from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, Download, Mail, Printer, FileText, Clock, User, UserCheck, Calendar } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function HRTimesheetDetailPage() {
@@ -43,6 +31,7 @@ export default function HRTimesheetDetailPage() {
       return
     }
     fetchTimesheet()
+    fetchEmailConfig()
   }, [user, timesheetId, router])
 
   const fetchTimesheet = async () => {
@@ -110,86 +99,49 @@ export default function HRTimesheetDetailPage() {
   }
 
   const handlePrint = () => {
+    if (!timesheet) return
+    
+    // Calculate PLAWA hours
+    const totalPlawaHours = timesheet.entries.reduce((total, entry) => total + (entry.plawaHours || 0), 0)
+    
+    // Store original title
+    const originalTitle = document.title
+    
+    // Set custom title for print/PDF
+    const periodStart = format(timesheet.periodStart, 'MMM d')
+    const periodEnd = format(timesheet.periodEnd, 'MMM d, yyyy')
+    document.title = `${timesheet.user.name} - ${periodStart} - ${periodEnd} - Hours ${calculateTotalHours().toFixed(2)} - PLAWA ${totalPlawaHours.toFixed(2)}`
+    
+    // Print
     window.print()
+    
+    // Restore original title after a short delay
+    setTimeout(() => {
+      document.title = originalTitle
+    }, 1000)
   }
 
+  const [emailConfig, setEmailConfig] = useState<any>(null)
+  const [emailLoading, setEmailLoading] = useState(false)
+
   const handleEmailReport = () => {
+    if (!emailConfig?.emailConfig?.isEnabled) {
+      toast.error('Email is not configured')
+      return
+    }
     toast.info('Email functionality coming soon')
   }
 
-  const handleSavePDF = async () => {
+  const fetchEmailConfig = async () => {
     try {
-      const jsPDF = (await import('jspdf')).default
-      const html2canvas = (await import('html2canvas')).default
-      
-      // Hide action buttons and show print-friendly version
-      const actionButtons = document.querySelectorAll('.print\\:hide-actions, .no-print')
-      actionButtons.forEach(btn => (btn as HTMLElement).style.display = 'none')
-      
-      // Get the main content area
-      const element = document.getElementById('timesheet-content')
-      if (!element) {
-        toast.error('Unable to generate PDF - content not found')
-        return
-      }
-      
-      toast.info('Generating PDF... Please wait')
-      
-      // Generate canvas from HTML
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: element.scrollWidth,
-        height: element.scrollHeight
-      })
-      
-      // Create PDF
-      const pdf = new jsPDF('p', 'mm', 'a4')
-      const imgData = canvas.toDataURL('image/png')
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = pdf.internal.pageSize.getHeight()
-      const imgWidth = canvas.width
-      const imgHeight = canvas.height
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight)
-      const imgX = (pdfWidth - imgWidth * ratio) / 2
-      const imgY = 10
-      
-      // Add image to PDF
-      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio)
-      
-      // Add additional pages if content is too long
-      const totalPDFPages = Math.ceil(imgHeight * ratio / pdfHeight)
-      for (let i = 1; i < totalPDFPages; i++) {
-        pdf.addPage()
-        pdf.addImage(
-          imgData, 
-          'PNG', 
-          imgX, 
-          -(pdfHeight * i) + imgY, 
-          imgWidth * ratio, 
-          imgHeight * ratio
-        )
-      }
-      
-      // Save PDF
-      const fileName = `${timesheet?.user.name.replace(/\s+/g, '_')}_timesheet_${format(timesheet?.periodStart || new Date(), 'yyyy-MM-dd')}.pdf`
-      pdf.save(fileName)
-      
-      toast.success('PDF exported successfully!')
-      
-      // Restore action buttons
-      actionButtons.forEach(btn => (btn as HTMLElement).style.display = '')
-      
+      setEmailLoading(true)
+      const response = await apiClient.get('/api/settings/email')
+      setEmailConfig(response)
     } catch (error) {
-      console.error('Error generating PDF:', error)
-      toast.error('Failed to generate PDF. Please try again.')
-      
-      // Restore action buttons in case of error
-      const actionButtons = document.querySelectorAll('.print\\:hide-actions, .no-print')
-      actionButtons.forEach(btn => (btn as HTMLElement).style.display = '')
+      console.error('Error fetching email config:', error)
+      setEmailConfig(null)
+    } finally {
+      setEmailLoading(false)
     }
   }
 
@@ -232,20 +184,20 @@ export default function HRTimesheetDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+      <div className='min-h-screen bg-gray-50 flex items-center justify-center'>
+        <div className='animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600'></div>
       </div>
     )
   }
 
   if (!timesheet) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900">Timesheet not found</h2>
+      <div className='min-h-screen bg-gray-50 flex items-center justify-center'>
+        <div className='text-center'>
+          <h2 className='text-2xl font-bold text-gray-900'>Timesheet not found</h2>
           <button
             onClick={() => router.push('/hr')}
-            className="mt-4 bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700"
+            className='mt-4 bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700'
           >
             Back to HR Dashboard
           </button>
@@ -255,259 +207,228 @@ export default function HRTimesheetDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8" id="timesheet-content">
-        <div className="px-4 py-6 sm:px-0">
+    <div className='min-h-screen bg-gray-50 print:min-h-0'>
+      <div className='max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 print:py-0 print:px-0' id='timesheet-content'>
+        <div className='px-4 py-6 sm:px-0'>
           {/* Header */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
+          <div className='mb-6'>
+            {/* Screen layout */}
+            <div className='flex items-center justify-between print:hidden'>
+              <div className='flex items-center'>
                 <button
                   onClick={() => router.push('/hr')}
-                  className="mr-4 p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100 no-print"
+                  className='mr-4 p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100 no-print'
                 >
-                  <ArrowLeft className="w-5 h-5" />
+                  <ArrowLeft className='w-5 h-5' />
                 </button>
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900">Timesheet Review</h1>
-                  <p className="text-gray-600 mt-1">
+                  <h1 className='text-3xl font-bold text-gray-900'>{timesheet.user.name}</h1>
+                  <p className='text-gray-600 mt-1'>
                     {timesheet.user.name} • {format(timesheet.periodStart, 'MMM d')} - {format(timesheet.periodEnd, 'MMM d, yyyy')}
                   </p>
                 </div>
               </div>
-              
-              {/* Action Buttons */}
-              <div className="flex space-x-3 print:hide-actions">
-                <button
-                  onClick={handlePrint}
-                  className="flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <Printer className="w-4 h-4 mr-2" />
-                  Print
-                </button>
-                <button
-                  onClick={handleEmailReport}
-                  className="flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <Mail className="w-4 h-4 mr-2" />
-                  Email
-                </button>
-                <button
-                  onClick={handleSavePDF}
-                  className="flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Save PDF
-                </button>
-              </div>
+            
+            {/* Action Buttons */}
+            <div className='flex space-x-3'>
+              <button
+                onClick={handlePrint}
+                className='flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50'
+              >
+                <Printer className='w-4 h-4 mr-2' />
+                Print
+              </button>
+              <button
+                onClick={handleEmailReport}
+                disabled={emailLoading || !emailConfig?.emailConfig?.isEnabled}
+                title={!emailConfig?.emailConfig?.isEnabled ? 'Email is not configured' : 'Send timesheet via email'}
+                className={`flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium ${
+                  emailLoading || !emailConfig?.emailConfig?.isEnabled
+                    ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                    : 'text-gray-700 bg-white hover:bg-gray-50'
+                }`}
+              >
+                <Mail className='w-4 h-4 mr-2' />
+                Email
+              </button>
             </div>
-          </div>
-
-          {/* Review Header with Actions */}
-          <div className="bg-white rounded-lg shadow mb-6 p-6 print:shadow-none print:border print:border-gray-400">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 print:text-base print:font-bold print:text-black">
-                  HR Review - {timesheet.user.name}
-                </h3>
-                <p className="text-sm text-gray-500 mt-1 print:text-black print:text-xs">
-                  Pay Period: {format(timesheet.periodStart, 'MMM d')} - {format(timesheet.periodEnd, 'MMM d, yyyy')}
-                </p>
-              </div>
             </div>
             
-            {/* Action Buttons for HR */}
-            {timesheet.state === 'PENDING_HR' && (
-              <div className="flex items-center space-x-3 pt-4 border-t border-gray-200 print:hide-actions">
-                <button
-                  onClick={() => setShowDenialModal(true)}
-                  disabled={submitting}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Deny
-                </button>
-                <button
-                  onClick={() => setShowApprovalModal(true)}
-                  disabled={submitting}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Sign & Approve
-                </button>
-              </div>
-            )}
+            {/* Print layout - Centered user name */}
+            <div className='hidden print:block print:text-center print:w-full'>
+              <h1 className='print:text-2xl print:font-bold print:text-black print:mb-4'>{timesheet.user.name}</h1>
+            </div>
+            
+            {/* Print layout - Pay period and summary cards */}
+                    <div className='hidden print:block print:mt-4'>
+          <div className='print:text-center print:mb-3'>
+            <p className='print:text-sm print:font-medium print:text-black'>
+              Pay Period: {format(timesheet.periodStart, 'MMM d')} - {format(timesheet.periodEnd, 'MMM d, yyyy')}
+            </p>
           </div>
-
-          {/* Status and Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 summary-cards">
-            <div className="bg-white rounded-lg shadow p-6 summary-card print:shadow-none print:border print:border-gray-400">
-              <div className="flex items-center">
-                <FileText className="w-8 h-8 text-primary-600 print:hidden" />
-                <div className="ml-4 print:ml-0">
-                  <h4 className="text-sm font-medium text-gray-500 print:text-black">Status</h4>
-                  <p className={`text-sm font-semibold px-2 py-1 rounded-full print:px-0 print:py-0 print:text-black ${getStatusColor(timesheet.state)}`}>
-                    {getStatusText(timesheet.state)}
-                  </p>
-                </div>
-              </div>
+          <div className='print:flex print:justify-center print:space-x-6 print:mb-4'>
+            <div className='print:bg-gray-100 print:border print:border-gray-300 print:rounded-lg print:px-4 print:py-2 print:text-center'>
+              <div className='print:text-xs print:font-bold print:text-black'>Total Hours</div>
+              <div className='print:text-lg print:font-bold print:text-black'>{calculateTotalHours().toFixed(2)}</div>
             </div>
-
-            <div className="bg-white rounded-lg shadow p-6 summary-card print:shadow-none print:border print:border-gray-400">
-              <div className="flex items-center">
-                <Clock className="w-8 h-8 text-green-600 print:hidden" />
-                <div className="ml-4 print:ml-0">
-                  <h4 className="text-sm font-medium text-gray-500 print:text-black">Total Hours</h4>
-                  <p className="text-2xl font-bold text-gray-900 print:text-black print:text-lg">{calculateTotalHours().toFixed(2)}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6 summary-card print:shadow-none print:border print:border-gray-400">
-              <div className="flex items-center">
-                <User className="w-8 h-8 text-blue-600 print:hidden" />
-                <div className="ml-4 print:ml-0">
-                  <h4 className="text-sm font-medium text-gray-500 print:text-black">Employee</h4>
-                  <p className="text-lg font-semibold text-gray-900 print:text-black print:text-sm">{timesheet.user.name}</p>
-                  <p className="text-sm text-gray-500 print:text-black print:text-xs">{timesheet.user.email}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6 summary-card print:shadow-none print:border print:border-gray-400">
-              <div className="flex items-center">
-                <Calendar className="w-8 h-8 text-purple-600 print:hidden" />
-                <div className="ml-4 print:ml-0">
-                  <h4 className="text-sm font-medium text-gray-500 print:text-black">Submitted</h4>
-                  <p className="text-lg font-semibold text-gray-900 print:text-black print:text-sm">
-                    {format(timesheet.updatedAt, 'MMM d, yyyy')}
-                  </p>
-                  <p className="text-sm text-gray-500 print:text-black print:text-xs">
-                    {format(timesheet.updatedAt, 'h:mm a')}
-                  </p>
-                </div>
-              </div>
+            <div className='print:bg-gray-100 print:border print:border-gray-300 print:rounded-lg print:px-4 print:py-2 print:text-center'>
+              <div className='print:text-xs print:font-bold print:text-black'>PLAWA Hours</div>
+              <div className='print:text-lg print:font-bold print:text-black'>{timesheet.entries.reduce((total, entry) => total + (entry.plawaHours || 0), 0).toFixed(2)}</div>
             </div>
           </div>
+        </div>
+          </div>
+
+          {/* Action Buttons for HR */}
+          {timesheet.state === 'PENDING_HR' && (
+            <div className='flex items-center space-x-3 pt-4 border-t border-gray-200 print:hide-actions mb-6'>
+              <button
+                onClick={() => setShowDenialModal(true)}
+                disabled={submitting}
+                className='inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50'
+              >
+                <XCircle className='w-4 h-4 mr-2' />
+                Deny
+              </button>
+              <button
+                onClick={() => setShowApprovalModal(true)}
+                disabled={submitting}
+                className='inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50'
+              >
+                <CheckCircle className='w-4 h-4 mr-2' />
+                Sign & Approve
+              </button>
+            </div>
+          )}
+
+
 
           {/* Signature Status */}
-          <div className="bg-white rounded-lg shadow mb-6 p-6 signatures-section print:shadow-none print:border print:border-gray-400">
-            <h3 className="text-lg font-medium text-gray-900 mb-4 print:text-base print:font-bold print:text-black">Digital Signatures</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:gap-4">
-              <div className="border rounded-lg p-4 signature-box print:border-gray-400">
-                <div className="flex items-center space-x-3 mb-2">
-                  {timesheet.staffSig ? <UserCheck className="w-6 h-6 text-green-600 print:hidden" /> : <User className="w-6 h-6 text-gray-400 print:hidden" />}
+          <div className='bg-white rounded-lg shadow mb-6 p-6 signatures-section print:shadow-none print:border print:border-gray-400'>
+            <h3 className='text-lg font-medium text-gray-900 mb-4 print:text-base print:font-bold print:text-black'>Digital Signatures</h3>
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-6 print:flex print:flex-row print:gap-2 print:items-stretch print:h-32'>
+              <div className='border rounded-lg p-4 signature-box print:border-gray-400 print:flex-1 print:min-w-0 print:relative print:p-2'>
+                <div className='flex items-center space-x-3 mb-2 print:absolute print:top-1 print:left-2 print:z-10'>
+                  {timesheet.staffSig ? <UserCheck className='w-6 h-6 text-green-600 print:hidden' /> : <User className='w-6 h-6 text-gray-400 print:hidden' />}
                   <div>
-                    <p className={`font-medium ${timesheet.staffSig ? 'text-green-600' : 'text-gray-400'} print:text-black`}>
+                    <p className={`font-medium ${timesheet.staffSig ? 'text-green-600' : 'text-gray-400'} print:text-black print:text-xs print:font-bold`}>
                       Staff Signature
                     </p>
                   </div>
                 </div>
                 {timesheet.staffSig ? (
-                  <div className="mt-2">
-                    <div className="bg-gray-50 p-2 rounded border print:bg-white print:border-gray-300">
+                  <div className='mt-2 print:mt-0 print:h-full print:relative'>
+                    <div className='bg-gray-50 p-2 rounded border print:bg-white print:border-gray-300 print:absolute print:top-6 print:left-2 print:right-2 print:bottom-4 print:flex print:items-center print:justify-center'>
                       <img 
                         src={timesheet.staffSig} 
-                        alt="Staff Signature" 
-                        className="max-h-16 w-auto print:max-h-12"
+                        alt='Staff Signature' 
+                        className='max-h-16 w-auto print:max-h-16 print:w-auto'
                         style={{ filter: 'contrast(1.2)' }}
                       />
                     </div>
-                    {timesheet.staffSigAt && (
-                      <p className="text-xs text-gray-500 mt-1 print:text-black">
-                        Signed: {format(new Date(timesheet.staffSigAt), 'MMM d, yyyy h:mm a')}
+                    <div className='print:absolute print:bottom-1 print:left-2 print:right-2 print:bg-transparent print:text-center'>
+                      <p className='text-xs text-gray-600 print:text-black print:text-xs print:m-0 print:font-bold print:leading-tight'>
+                        By: {timesheet.user.name}
                       </p>
-                    )}
-                    <p className="text-xs text-gray-600 mt-1 print:text-black">
-                      By: {timesheet.user.name}
-                    </p>
+                      {timesheet.staffSigAt && (
+                        <p className='text-xs text-gray-500 print:text-black print:text-xs print:m-0 print:font-bold print:leading-tight'>
+                          {format(new Date(timesheet.staffSigAt), 'MMM d, yyyy h:mm a')}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 mt-2 print:text-black">Not signed</p>
+                  <div className='print:h-full print:flex print:items-center print:justify-center print:mt-6'>
+                    <p className='text-sm text-gray-400 mt-2 print:text-black print:text-center'>Not signed</p>
+                  </div>
                 )}
               </div>
 
-              <div className="border rounded-lg p-4 signature-box print:border-gray-400">
-                <div className="flex items-center space-x-3 mb-2">
-                  {timesheet.managerSig ? <UserCheck className="w-6 h-6 text-green-600 print:hidden" /> : <User className="w-6 h-6 text-gray-400 print:hidden" />}
+              <div className='border rounded-lg p-4 signature-box print:border-gray-400 print:flex-1 print:min-w-0 print:relative print:p-2'>
+                <div className='flex items-center space-x-3 mb-2 print:absolute print:top-1 print:left-2 print:z-10'>
+                  {timesheet.managerSig ? <UserCheck className='w-6 h-6 text-green-600 print:hidden' /> : <User className='w-6 h-6 text-gray-400 print:hidden' />}
                   <div>
-                    <p className={`font-medium ${timesheet.managerSig ? 'text-green-600' : 'text-gray-400'} print:text-black`}>
+                    <p className={`font-medium ${timesheet.managerSig ? 'text-green-600' : 'text-gray-400'} print:text-black print:text-xs print:font-bold`}>
                       Manager Signature
                     </p>
                   </div>
                 </div>
                 {timesheet.managerSig ? (
-                  <div className="mt-2">
-                    <div className="bg-gray-50 p-2 rounded border print:bg-white print:border-gray-300">
+                  <div className='mt-2 print:mt-0 print:h-full print:relative'>
+                    <div className='bg-gray-50 p-2 rounded border print:bg-white print:border-gray-300 print:absolute print:top-6 print:left-2 print:right-2 print:bottom-4 print:flex print:items-center print:justify-center'>
                       <img 
                         src={timesheet.managerSig} 
-                        alt="Manager Signature" 
-                        className="max-h-16 w-auto print:max-h-12"
+                        alt='Manager Signature' 
+                        className='max-h-16 w-auto print:max-h-16 print:w-auto'
                         style={{ filter: 'contrast(1.2)' }}
                       />
                     </div>
-                    {timesheet.managerSigAt && (
-                      <p className="text-xs text-gray-500 mt-1 print:text-black">
-                        Signed: {format(new Date(timesheet.managerSigAt), 'MMM d, yyyy h:mm a')}
+                    <div className='print:absolute print:bottom-1 print:left-2 print:right-2 print:bg-transparent print:text-center'>
+                      <p className='text-xs text-gray-600 print:text-black print:text-xs print:m-0 print:font-bold print:leading-tight'>
+                        By: Manager
                       </p>
-                    )}
-                    {timesheet.user.manager && (
-                      <p className="text-xs text-gray-600 mt-1 print:text-black">
-                        By: {timesheet.user.manager.name}
-                      </p>
-                    )}
+                      {timesheet.managerSigAt && (
+                        <p className='text-xs text-gray-500 print:text-black print:text-xs print:m-0 print:font-bold print:leading-tight'>
+                          {format(new Date(timesheet.managerSigAt), 'MMM d, yyyy h:mm a')}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 mt-2 print:text-black">Not signed</p>
+                  <div className='print:h-full print:flex print:items-center print:justify-center print:mt-6'>
+                    <p className='text-sm text-gray-400 mt-2 print:text-black print:text-center'>Not signed</p>
+                  </div>
                 )}
               </div>
 
-              <div className="border rounded-lg p-4 signature-box print:border-gray-400">
-                <div className="flex items-center space-x-3 mb-2">
-                  {timesheet.hrSig ? <UserCheck className="w-6 h-6 text-green-600 print:hidden" /> : <User className="w-6 h-6 text-gray-400 print:hidden" />}
+              <div className='border rounded-lg p-4 signature-box print:border-gray-400 print:flex-1 print:min-w-0 print:relative print:p-2'>
+                <div className='flex items-center space-x-3 mb-2 print:absolute print:top-1 print:left-2 print:z-10'>
+                  {timesheet.hrSig ? <UserCheck className='w-6 h-6 text-green-600 print:hidden' /> : <User className='w-6 h-6 text-gray-400 print:hidden' />}
                   <div>
-                    <p className={`font-medium ${timesheet.hrSig ? 'text-green-600' : 'text-gray-400'} print:text-black`}>
+                    <p className={`font-medium ${timesheet.hrSig ? 'text-green-600' : 'text-gray-400'} print:text-black print:text-xs print:font-bold`}>
                       HR Signature
                     </p>
                   </div>
                 </div>
                 {timesheet.hrSig ? (
-                  <div className="mt-2">
-                    <div className="bg-gray-50 p-2 rounded border print:bg-white print:border-gray-300">
+                  <div className='mt-2 print:mt-0 print:h-full print:relative'>
+                    <div className='bg-gray-50 p-2 rounded border print:bg-white print:border-gray-300 print:absolute print:top-6 print:left-2 print:right-2 print:bottom-4 print:flex print:items-center print:justify-center'>
                       <img 
                         src={timesheet.hrSig} 
-                        alt="HR Signature" 
-                        className="max-h-16 w-auto print:max-h-12"
+                        alt='HR Signature' 
+                        className='max-h-16 w-auto print:max-h-16 print:w-auto'
                         style={{ filter: 'contrast(1.2)' }}
                       />
                     </div>
-                    {timesheet.hrSigAt && (
-                      <p className="text-xs text-gray-500 mt-1 print:text-black">
-                        Signed: {format(new Date(timesheet.hrSigAt), 'MMM d, yyyy h:mm a')}
+                    <div className='print:absolute print:bottom-1 print:left-2 print:right-2 print:bg-transparent print:text-center'>
+                      <p className='text-xs text-gray-600 print:text-black print:text-xs print:m-0 print:font-bold print:leading-tight'>
+                        By: {user?.name}
                       </p>
-                    )}
-                    <p className="text-xs text-gray-600 mt-1 print:text-black">
-                      By: {user?.name}
-                    </p>
+                      {timesheet.hrSigAt && (
+                        <p className='text-xs text-gray-500 print:text-black print:text-xs print:m-0 print:font-bold print:leading-tight'>
+                          {format(new Date(timesheet.hrSigAt), 'MMM d, yyyy h:mm a')}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 mt-2 print:text-black">Not signed</p>
+                  <div className='print:h-full print:flex print:items-center print:justify-center print:mt-6'>
+                    <p className='text-sm text-gray-400 mt-2 print:text-black print:text-center'>Not signed</p>
+                  </div>
                 )}
               </div>
             </div>
           </div>
 
           {/* Timesheet Grid */}
-          <div className="mb-6">
+          <div className='mb-6'>
             <TimesheetGrid timesheet={timesheet} readOnly={true} />
           </div>
 
           {/* Comments Section */}
-          <div className="mb-6">
+          <div className='mb-6 print:hidden'>
             <TimesheetComments 
               timesheetId={timesheet.id} 
-              readOnly={false}
-              timesheet={timesheet}
             />
           </div>
         </div>
@@ -518,48 +439,47 @@ export default function HRTimesheetDetailPage() {
         isOpen={showApprovalModal}
         onClose={() => setShowApprovalModal(false)}
         onSave={handleApprove}
-        title="HR Approval Signature"
-        description="Please sign below to approve this timesheet."
+        title='HR Approval Signature'
       />
 
       {/* Denial Modal */}
       {showDenialModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowDenialModal(false)} />
+        <div className='fixed inset-0 z-50 overflow-y-auto'>
+          <div className='flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0'>
+            <div className='fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity' onClick={() => setShowDenialModal(false)} />
 
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-              <div className="mb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">Deny Timesheet</h3>
-                <p className="text-sm text-gray-500 mt-2">
+            <div className='inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6'>
+              <div className='mb-4'>
+                <h3 className='text-lg leading-6 font-medium text-gray-900'>Deny Timesheet</h3>
+                <p className='text-sm text-gray-500 mt-2'>
                   Please provide a reason for denying this timesheet. It will be returned to the staff member for corrections.
                 </p>
               </div>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className='mb-4'>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Reason for Denial
                 </label>
                 <textarea
                   value={denialNote}
                   onChange={(e) => setDenialNote(e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  placeholder="Enter the reason for denial..."
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500'
+                  placeholder='Enter the reason for denial...'
                 />
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div className='flex justify-end space-x-3'>
                 <button
                   onClick={() => setShowDenialModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className='px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50'
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeny}
                   disabled={submitting || !denialNote.trim()}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
+                  className='px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50'
                 >
                   {submitting ? 'Denying...' : 'Deny Timesheet'}
                 </button>

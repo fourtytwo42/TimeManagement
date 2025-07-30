@@ -99,9 +99,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: requestBody,
+        body: requestBody
       })
 
       if (!response.ok) {
@@ -158,7 +158,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     isLoading,
-    isAuthenticated: !!user && !!token,
+    isAuthenticated: !!user && !!token
   }
 
   return (

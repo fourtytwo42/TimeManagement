@@ -6,9 +6,11 @@ import { prisma } from '@/lib/db'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -33,7 +35,7 @@ export async function POST(
     }
 
     const updatedTimesheet = await submitTimesheet(
-      params.id,
+      id,
       user.id,
       signature
     )
@@ -44,12 +46,12 @@ export async function POST(
       await createTimesheetNotification(
         user.id,
         'submission',
-        params.id
+        id
       )
 
       // Get timesheet details to notify manager
       const timesheet = await prisma.timesheet.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: {
           user: {
             select: { 
@@ -67,7 +69,7 @@ export async function POST(
         await createManagerApprovalNotification(
           timesheet.user.manager.id,
           timesheet.user.name,
-          params.id
+          id
         )
       }
     } catch (notificationError) {

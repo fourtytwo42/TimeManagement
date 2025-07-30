@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
           smtpPort: parseInt(smtpPort),
           smtpSecure: smtpSecure === true,
           smtpUser,
-          smtpPassword: encryptedPassword,
+          smtpPassword: encryptedPassword || '',
           fromEmail,
           fromName,
           isEnabled: isEnabled === true,

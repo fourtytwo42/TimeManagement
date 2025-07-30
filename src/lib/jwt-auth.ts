@@ -109,7 +109,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
       id: user.id,
       email: user.email!,
       name: user.name!,
-      role: user.role
+      role: user.role as Role
     }
 
     // Generate JWT token
@@ -150,7 +150,7 @@ export async function getUserById(id: string): Promise<AuthUser | null> {
       id: user.id,
       email: user.email!,
       name: user.name!,
-      role: user.role
+      role: user.role as Role
     }
   } catch (error) {
     console.error('Get user by ID error:', error)

@@ -68,7 +68,7 @@ export async function getOrCreateCurrentTimesheet(userId: string): Promise<Times
     where: {
       userId,
       periodStart: currentPeriod.start,
-      periodEnd: currentPeriod.end,
+      periodEnd: currentPeriod.end
     },
     include: {
       entries: {
@@ -84,7 +84,7 @@ export async function getOrCreateCurrentTimesheet(userId: string): Promise<Times
           manager: {
             select: {
               id: true,
-              name: true,
+              name: true
             }
           }
         }
@@ -105,7 +105,7 @@ export async function getOrCreateCurrentTimesheet(userId: string): Promise<Times
         entries: {
           create: periodDates.map(date => ({
             date,
-            plawaHours: 0,
+            plawaHours: 0
           }))
         }
       },
@@ -123,7 +123,7 @@ export async function getOrCreateCurrentTimesheet(userId: string): Promise<Times
             manager: {
               select: {
                 id: true,
-                name: true,
+                name: true
               }
             }
           }
@@ -145,7 +145,7 @@ export async function createTimesheetForPeriod(
     periodStart: periodStart.toISOString(),
     periodEnd: periodEnd.toISOString(),
     TS_STATE_available: !!TS_STATE,
-    PENDING_STAFF_value: TS_STATE.PENDING_STAFF
+    PENDING_STAFFvalue: TS_STATE.PENDING_STAFF
   })
 
   try {
@@ -155,7 +155,7 @@ export async function createTimesheetForPeriod(
       where: {
         userId,
         periodStart,
-        periodEnd,
+        periodEnd
       }
     })
 
@@ -181,7 +181,7 @@ export async function createTimesheetForPeriod(
         entries: {
           create: periodDates.map(date => ({
             date,
-            plawaHours: 0,
+            plawaHours: 0
           }))
         }
       },
@@ -199,7 +199,7 @@ export async function createTimesheetForPeriod(
             manager: {
               select: {
                 id: true,
-                name: true,
+                name: true
               }
             }
           }
@@ -218,7 +218,7 @@ export async function createTimesheetForPeriod(
     console.error('❌ Error in createTimesheetForPeriod:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
-      TS_STATE_debug: {
+      TS_STATEdebug: {
         TS_STATE,
         PENDING_STAFF: TS_STATE.PENDING_STAFF,
         typeof_TS_STATE: typeof TS_STATE,
@@ -275,7 +275,7 @@ export async function getTimesheetById(id: string, userId: string, userRole: str
           manager: {
             select: {
               id: true,
-              name: true,
+              name: true
             }
           }
         }
@@ -321,7 +321,7 @@ export async function updateTimesheetEntry(
     where: {
       id: timesheetId,
       userId,
-      state: TS_STATE.PENDING_STAFF,
+      state: TS_STATE.PENDING_STAFF
     }
   })
 
@@ -333,9 +333,9 @@ export async function updateTimesheetEntry(
   const updatedEntry = await prisma.timesheetEntry.update({
     where: {
       id: entryId,
-      timesheetId,
+      timesheetId
     },
-    data,
+    data
   })
 
   return updatedEntry
@@ -347,12 +347,12 @@ export async function submitTimesheet(timesheetId: string, userId: string, signa
     where: {
       id: timesheetId,
       userId,
-      state: TS_STATE.PENDING_STAFF,
+      state: TS_STATE.PENDING_STAFF
     },
     include: {
       user: {
         select: {
-          managerId: true,
+          managerId: true
         }
       }
     }
@@ -410,7 +410,7 @@ export async function getUserTimesheets(userId: string, userRole: string) {
           manager: {
             select: {
               id: true,
-              name: true,
+              name: true
             }
           }
         }
@@ -441,7 +441,7 @@ export async function approveTimesheet(timesheetId: string, managerId: string, s
     include: {
       user: {
         select: {
-          managerId: true,
+          managerId: true
         }
       }
     }
@@ -523,7 +523,7 @@ export async function getPendingManagerApprovals(managerId: string) {
           manager: {
             select: {
               id: true,
-              name: true,
+              name: true
             }
           }
         }

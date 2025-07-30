@@ -5,9 +5,11 @@ import { isWeekend } from 'date-fns'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -34,7 +36,7 @@ export async function POST(
     // Verify timesheet belongs to user and is editable
     const timesheet = await prisma.timesheet.findFirst({
       where: {
-        id: params.id,
+        id,
         userId: user.id
       },
       include: {
@@ -119,7 +121,7 @@ export async function POST(
 
     // Fetch the updated timesheet
     const updatedTimesheet = await prisma.timesheet.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         entries: {
           orderBy: { date: 'asc' }
@@ -143,7 +145,7 @@ export async function POST(
     })
 
     return NextResponse.json({
-      message: `Template "${template.name}" applied successfully`,
+      message: `Template '${template.name}' applied successfully`,
       timesheet: updatedTimesheet,
       entriesUpdated: updatedEntries.length
     })

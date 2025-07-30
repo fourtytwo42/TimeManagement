@@ -3,19 +3,7 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
 import { apiClient } from '@/lib/api-client'
-import { 
-  Mail, 
-  Server, 
-  Shield, 
-  Bell, 
-  TestTube, 
-  Save, 
-  Eye, 
-  EyeOff,
-  CheckCircle,
-  XCircle,
-  AlertCircle
-} from 'lucide-react'
+import { Mail, Server, Shield, Bell, TestTube, Save, Eye, EyeOff, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 
 interface EmailConfig {
   id?: string
@@ -162,12 +150,12 @@ export default function EmailSettings() {
 
   const getStatusIcon = () => {
     if (!emailConfig.isEnabled) {
-      return <XCircle className="h-5 w-5 text-red-500" />
+      return <XCircle className='h-5 w-5 text-red-500' />
     }
     if (emailConfig.testEmailSent) {
-      return <CheckCircle className="h-5 w-5 text-green-500" />
+      return <CheckCircle className='h-5 w-5 text-green-500' />
     }
-    return <AlertCircle className="h-5 w-5 text-yellow-500" />
+    return <AlertCircle className='h-5 w-5 text-yellow-500' />
   }
 
   const getStatusText = () => {
@@ -182,31 +170,31 @@ export default function EmailSettings() {
 
   if (isLoading && !emailConfig.smtpHost) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      <div className='flex items-center justify-center py-12'>
+        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600'></div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className='max-w-4xl mx-auto'>
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
+      <div className='mb-8'>
+        <div className='flex items-center justify-between'>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Email Settings</h2>
-            <p className="text-gray-600 mt-1">Configure SMTP settings and notification preferences</p>
+            <h2 className='text-2xl font-bold text-gray-900'>Email Settings</h2>
+            <p className='text-gray-600 mt-1'>Configure SMTP settings and notification preferences</p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className='flex items-center space-x-2'>
             {getStatusIcon()}
-            <span className="text-sm font-medium text-gray-700">{getStatusText()}</span>
+            <span className='text-sm font-medium text-gray-700'>{getStatusText()}</span>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
+      <div className='border-b border-gray-200 mb-6'>
+        <nav className='-mb-px flex space-x-8'>
           <button
             onClick={() => setActiveTab('smtp')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -215,8 +203,8 @@ export default function EmailSettings() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            <div className="flex items-center space-x-2">
-              <Server className="h-4 w-4" />
+            <div className='flex items-center space-x-2'>
+              <Server className='h-4 w-4' />
               <span>SMTP Configuration</span>
             </div>
           </button>
@@ -228,8 +216,8 @@ export default function EmailSettings() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            <div className="flex items-center space-x-2">
-              <Bell className="h-4 w-4" />
+            <div className='flex items-center space-x-2'>
+              <Bell className='h-4 w-4' />
               <span>Notification Settings</span>
             </div>
           </button>
@@ -238,20 +226,20 @@ export default function EmailSettings() {
 
       {/* SMTP Configuration Tab */}
       {activeTab === 'smtp' && (
-        <div className="space-y-6">
+        <div className='space-y-6'>
           {/* Enable/Disable Toggle */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
+          <div className='bg-white rounded-lg border border-gray-200 p-6'>
+            <div className='flex items-center justify-between'>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Email Notifications</h3>
-                <p className="text-sm text-gray-600">Enable or disable email notifications system-wide</p>
+                <h3 className='text-lg font-medium text-gray-900'>Email Notifications</h3>
+                <p className='text-sm text-gray-600'>Enable or disable email notifications system-wide</p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label className='relative inline-flex items-center cursor-pointer'>
                 <input
-                  type="checkbox"
+                  type='checkbox'
                   checked={emailConfig.isEnabled}
                   onChange={(e) => handleEmailConfigChange('isEnabled', e.target.checked)}
-                  className="sr-only peer"
+                  className='sr-only peer'
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
               </label>
@@ -259,117 +247,117 @@ export default function EmailSettings() {
           </div>
 
           {/* SMTP Server Settings */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">SMTP Server Settings</h3>
+          <div className='bg-white rounded-lg border border-gray-200 p-6'>
+            <h3 className='text-lg font-medium text-gray-900 mb-4'>SMTP Server Settings</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
                   SMTP Host *
                 </label>
                 <input
-                  type="text"
+                  type='text'
                   value={emailConfig.smtpHost}
                   onChange={(e) => handleEmailConfigChange('smtpHost', e.target.value)}
-                  placeholder="smtp.gmail.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder='smtp.gmail.com'
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
                   SMTP Port *
                 </label>
                 <input
-                  type="number"
+                  type='number'
                   value={emailConfig.smtpPort}
                   onChange={(e) => handleEmailConfigChange('smtpPort', parseInt(e.target.value))}
-                  placeholder="587"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder='587'
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Username *
                 </label>
                 <input
-                  type="text"
+                  type='text'
                   value={emailConfig.smtpUser}
                   onChange={(e) => handleEmailConfigChange('smtpUser', e.target.value)}
-                  placeholder="your-email@gmail.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder='your-email@gmail.com'
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Password {emailConfig.hasPassword ? '(Leave blank to keep current)' : '*'}
                 </label>
-                <div className="relative">
+                <div className='relative'>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={smtpPassword}
                     onChange={(e) => setSmtpPassword(e.target.value)}
                     placeholder={emailConfig.hasPassword ? '••••••••' : 'Enter password'}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className='w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
                   />
                   <button
-                    type="button"
+                    type='button'
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    className='absolute inset-y-0 right-0 pr-3 flex items-center'
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
+                      <EyeOff className='h-4 w-4 text-gray-400' />
                     ) : (
-                      <Eye className="h-4 w-4 text-gray-400" />
+                      <Eye className='h-4 w-4 text-gray-400' />
                     )}
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="mt-4">
-              <label className="flex items-center">
+            <div className='mt-4'>
+              <label className='flex items-center'>
                 <input
-                  type="checkbox"
+                  type='checkbox'
                   checked={emailConfig.smtpSecure}
                   onChange={(e) => handleEmailConfigChange('smtpSecure', e.target.checked)}
-                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  className='rounded border-gray-300 text-primary-600 focus:ring-primary-500'
                 />
-                <span className="ml-2 text-sm text-gray-700">Use SSL/TLS (recommended for port 465)</span>
+                <span className='ml-2 text-sm text-gray-700'>Use SSL/TLS (recommended for port 465)</span>
               </label>
             </div>
           </div>
 
           {/* From Address Settings */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">From Address Settings</h3>
+          <div className='bg-white rounded-lg border border-gray-200 p-6'>
+            <h3 className='text-lg font-medium text-gray-900 mb-4'>From Address Settings</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
                   From Email *
                 </label>
                 <input
-                  type="email"
+                  type='email'
                   value={emailConfig.fromEmail}
                   onChange={(e) => handleEmailConfigChange('fromEmail', e.target.value)}
-                  placeholder="noreply@company.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder='noreply@company.com'
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
                   From Name *
                 </label>
                 <input
-                  type="text"
+                  type='text'
                   value={emailConfig.fromName}
                   onChange={(e) => handleEmailConfigChange('fromName', e.target.value)}
-                  placeholder="Timesheet Management System"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder='Timesheet Management System'
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
                 />
               </div>
             </div>
@@ -377,13 +365,13 @@ export default function EmailSettings() {
 
           {/* Test Email */}
           {emailConfig.isEnabled && (
-            <div className="bg-blue-50 rounded-lg border border-blue-200 p-6">
-              <div className="flex items-center justify-between">
+            <div className='bg-blue-50 rounded-lg border border-blue-200 p-6'>
+              <div className='flex items-center justify-between'>
                 <div>
-                  <h3 className="text-lg font-medium text-blue-900">Test Email Configuration</h3>
-                  <p className="text-sm text-blue-700">Send a test email to verify your settings</p>
+                  <h3 className='text-lg font-medium text-blue-900'>Test Email Configuration</h3>
+                  <p className='text-sm text-blue-700'>Send a test email to verify your settings</p>
                   {emailConfig.lastTestAt && (
-                    <p className="text-xs text-blue-600 mt-1">
+                    <p className='text-xs text-blue-600 mt-1'>
                       Last tested: {new Date(emailConfig.lastTestAt).toLocaleString()}
                     </p>
                   )}
@@ -391,9 +379,9 @@ export default function EmailSettings() {
                 <button
                   onClick={handleTestEmail}
                   disabled={isTesting || !emailConfig.smtpHost}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className='flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed'
                 >
-                  <TestTube className="h-4 w-4" />
+                  <TestTube className='h-4 w-4' />
                   <span>{isTesting ? 'Sending...' : 'Send Test Email'}</span>
                 </button>
               </div>
@@ -404,14 +392,14 @@ export default function EmailSettings() {
 
       {/* Notification Settings Tab */}
       {activeTab === 'notifications' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Notification Types</h3>
-            <p className="text-sm text-gray-600 mb-6">
+        <div className='space-y-6'>
+          <div className='bg-white rounded-lg border border-gray-200 p-6'>
+            <h3 className='text-lg font-medium text-gray-900 mb-4'>Notification Types</h3>
+            <p className='text-sm text-gray-600 mb-6'>
               Control which types of notifications are sent via email. Users will still see in-app notifications.
             </p>
 
-            <div className="space-y-4">
+            <div className='space-y-4'>
               {[
                 { key: 'timesheetSubmissionEnabled', label: 'Timesheet Submissions', description: 'Notify when staff submit timesheets for approval' },
                 { key: 'timesheetApprovalEnabled', label: 'Timesheet Approvals', description: 'Notify when managers approve timesheets' },
@@ -422,17 +410,17 @@ export default function EmailSettings() {
                 { key: 'reportDeliveryEnabled', label: 'Report Delivery', description: 'Email reports when requested' },
                 { key: 'systemAlertsEnabled', label: 'System Alerts', description: 'Important system notifications and alerts' }
               ].map((setting) => (
-                <div key={setting.key} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div key={setting.key} className='flex items-center justify-between p-4 border border-gray-200 rounded-lg'>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900">{setting.label}</h4>
-                    <p className="text-sm text-gray-600">{setting.description}</p>
+                    <h4 className='text-sm font-medium text-gray-900'>{setting.label}</h4>
+                    <p className='text-sm text-gray-600'>{setting.description}</p>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
+                  <label className='relative inline-flex items-center cursor-pointer'>
                     <input
-                      type="checkbox"
+                      type='checkbox'
                       checked={notificationSettings[setting.key as keyof NotificationSettings]}
                       onChange={(e) => handleNotificationChange(setting.key as keyof NotificationSettings, e.target.checked)}
-                      className="sr-only peer"
+                      className='sr-only peer'
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
                   </label>
@@ -444,13 +432,13 @@ export default function EmailSettings() {
       )}
 
       {/* Save Button */}
-      <div className="flex justify-end">
+      <div className='flex justify-end'>
         <button
           onClick={handleSaveSettings}
           disabled={isLoading}
-          className="flex items-center space-x-2 px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className='flex items-center space-x-2 px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed'
         >
-          <Save className="h-4 w-4" />
+          <Save className='h-4 w-4' />
           <span>{isLoading ? 'Saving...' : 'Save Settings'}</span>
         </button>
       </div>

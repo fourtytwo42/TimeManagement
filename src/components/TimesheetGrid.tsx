@@ -41,6 +41,7 @@ export default function TimesheetGrid({ timesheet, onEntryUpdate, readOnly = fal
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [isPrintMode, setIsPrintMode] = useState(false)
   const [timePicker, setTimePicker] = useState<TimePickerState>({
     isOpen: false,
     entryId: '',
@@ -79,6 +80,19 @@ export default function TimesheetGrid({ timesheet, onEntryUpdate, readOnly = fal
     }))
     setEntries(convertedEntries)
   }, [timesheet.entries])
+
+  // Detect print mode
+  useEffect(() => {
+    const checkPrintMode = () => {
+      setIsPrintMode(window.matchMedia('print').matches)
+    }
+    
+    checkPrintMode()
+    const mediaQuery = window.matchMedia('print')
+    mediaQuery.addEventListener('change', checkPrintMode)
+    
+    return () => mediaQuery.removeEventListener('change', checkPrintMode)
+  }, [])
 
   const updateEntry = async (entryId: string, field: string, value: string | number | null) => {
     if (readOnly) return
@@ -471,60 +485,64 @@ export default function TimesheetGrid({ timesheet, onEntryUpdate, readOnly = fal
 
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden print:shadow-none print:border print:border-gray-400">
-      <div className="px-6 py-4 border-b border-gray-200 timesheet-header print:px-2 print:py-2">
-        <div className="flex justify-between items-center">
+            <div className="px-6 py-4 border-b border-gray-200 timesheet-header print:px-2 print:py-2 print:hidden">
+        
+        {/* Screen layout - original design */}
+        <div className="flex justify-between items-center print:hidden">
           <div>
-            <h3 className="text-lg font-medium text-gray-900 print:text-black">
+            <h3 className="text-lg font-medium text-gray-900">
               Pay Period: {format(timesheet.periodStart, 'MMM d')} - {format(timesheet.periodEnd, 'MMM d, yyyy')}
             </h3>
-            {/* Signature Indicators */}
-            <div className="flex items-center space-x-4 mt-2 signature-indicators print:space-x-2">
-              <div className={`flex items-center space-x-1 ${timesheet.staffSig ? 'text-green-600' : 'text-gray-400'} print:text-black`}>
-                {timesheet.staffSig ? <UserCheck className="w-4 h-4 print:hidden" /> : <User className="w-4 h-4 print:hidden" />}
-                <div className="flex flex-col">
-                  <span className="text-sm print:text-xs">Staff {timesheet.staffSig ? 'Signed' : 'Unsigned'}</span>
-                  {timesheet.staffSig && timesheet.staffSigAt && (
-                    <span className="text-xs text-gray-500 print:text-black">
-                      {format(new Date(timesheet.staffSigAt), 'MMM d, h:mm a')}
-                    </span>
-                  )}
+            {/* Signature Indicators - Hidden for HR users */}
+            {!readOnly && (
+              <div className="flex items-center space-x-4 mt-2 signature-indicators">
+                <div className={`flex items-center space-x-1 ${timesheet.staffSig ? 'text-green-600' : 'text-gray-400'}`}>
+                  {timesheet.staffSig ? <UserCheck className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                  <div className="flex flex-col">
+                    <span className="text-sm">Staff {timesheet.staffSig ? 'Signed' : 'Unsigned'}</span>
+                    {timesheet.staffSig && timesheet.staffSigAt && (
+                      <span className="text-xs text-gray-500">
+                        {format(new Date(timesheet.staffSigAt), 'MMM d, h:mm a')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className={`flex items-center space-x-1 ${timesheet.managerSig ? 'text-green-600' : 'text-gray-400'}`}>
+                  {timesheet.managerSig ? <UserCheck className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                  <div className="flex flex-col">
+                    <span className="text-sm">Manager {timesheet.managerSig ? 'Signed' : 'Unsigned'}</span>
+                    {timesheet.managerSig && timesheet.managerSigAt && (
+                      <span className="text-xs text-gray-500">
+                        {format(new Date(timesheet.managerSigAt), 'MMM d, h:mm a')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className={`flex items-center space-x-1 ${timesheet.hrSig ? 'text-green-600' : 'text-gray-400'}`}>
+                  {timesheet.hrSig ? <UserCheck className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                  <div className="flex flex-col">
+                    <span className="text-sm">HR {timesheet.hrSig ? 'Signed' : 'Unsigned'}</span>
+                    {timesheet.hrSig && timesheet.hrSigAt && (
+                      <span className="text-xs text-gray-500">
+                        {format(new Date(timesheet.hrSigAt), 'MMM d, h:mm a')}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className={`flex items-center space-x-1 ${timesheet.managerSig ? 'text-green-600' : 'text-gray-400'} print:text-black`}>
-                {timesheet.managerSig ? <UserCheck className="w-4 h-4 print:hidden" /> : <User className="w-4 h-4 print:hidden" />}
-                <div className="flex flex-col">
-                  <span className="text-sm print:text-xs">Manager {timesheet.managerSig ? 'Signed' : 'Unsigned'}</span>
-                  {timesheet.managerSig && timesheet.managerSigAt && (
-                    <span className="text-xs text-gray-500 print:text-black">
-                      {format(new Date(timesheet.managerSigAt), 'MMM d, h:mm a')}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className={`flex items-center space-x-1 ${timesheet.hrSig ? 'text-green-600' : 'text-gray-400'} print:text-black`}>
-                {timesheet.hrSig ? <UserCheck className="w-4 h-4 print:hidden" /> : <User className="w-4 h-4 print:hidden" />}
-                <div className="flex flex-col">
-                  <span className="text-sm print:text-xs">HR {timesheet.hrSig ? 'Signed' : 'Unsigned'}</span>
-                  {timesheet.hrSig && timesheet.hrSigAt && (
-                    <span className="text-xs text-gray-500 print:text-black">
-                      {format(new Date(timesheet.hrSigAt), 'MMM d, h:mm a')}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
+            )}
           </div>
           <div className="text-right totals">
             <div className="space-y-2">
               <div>
-                <div className="text-sm text-gray-500 print:text-black">Total Hours</div>
-                <div className="text-2xl font-bold text-primary-600 print:text-black print:text-lg">
+                <div className="text-sm text-gray-500">Total Hours</div>
+                <div className="text-2xl font-bold text-primary-600">
                   {getPeriodTotal().toFixed(2)}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 print:text-black">PLAWA Hours This Period</div>
-                <div className="text-lg font-semibold text-green-600 print:text-black print:text-sm">
+                <div className="text-xs text-gray-500">PLAWA Hours This Period</div>
+                <div className="text-lg font-semibold text-green-600">
                   {getPeriodPlawaTotal().toFixed(2)}
                 </div>
               </div>
@@ -564,9 +582,11 @@ export default function TimesheetGrid({ timesheet, onEntryUpdate, readOnly = fal
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider total-column print:text-black">
                 Daily Total
               </th>
-              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider comments-column print:text-black">
-                Comments
-              </th>
+              {!isPrintMode && (
+                <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider comments-column print:text-black print:hidden">
+                  Comments
+                </th>
+              )}
               {!readOnly && (
                 <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider print:hidden">
                   Actions
@@ -575,7 +595,14 @@ export default function TimesheetGrid({ timesheet, onEntryUpdate, readOnly = fal
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {entries.map((entry) => {
+            {entries.filter((entry) => {
+              // In print view, hide rows with 0 hours worked and 0 PLAWA
+              if (typeof window !== 'undefined' && window.matchMedia('print').matches) {
+                const dailyTotal = getDailyTotal(entry)
+                return dailyTotal > 0 || (entry.plawaHours && entry.plawaHours > 0)
+              }
+              return true
+            }).map((entry) => {
               const isWeekendDay = isWeekend(entry.date)
               const dailyTotal = getDailyTotal(entry)
               const isUpdatingThis = isUpdating === entry.id
@@ -711,32 +738,34 @@ export default function TimesheetGrid({ timesheet, onEntryUpdate, readOnly = fal
                       </div>
                     </td>
 
-                    <td className="px-3 py-4 text-center comments-column">
-                      {readOnly ? (
-                        <div className="text-xs text-gray-600 print:text-black max-w-20 truncate">
-                          {entry.comments || '-'}
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => toggleRowExpansion(entry.id)}
-                          className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors print:hidden ${
-                            hasComments 
-                              ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' 
-                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                          }`}
-                          title={hasComments ? 'Has comments' : 'Add comment'}
-                        >
-                          {isExpanded ? (
-                            <ChevronDown className="w-4 h-4" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4" />
-                          )}
-                          {hasComments && (
-                            <MessageSquare className="w-3 h-3 absolute" />
-                          )}
-                        </button>
-                      )}
-                    </td>
+                    {!isPrintMode && (
+                      <td className="px-3 py-4 text-center comments-column print:hidden">
+                        {readOnly ? (
+                          <div className="text-xs text-gray-600 print:text-black max-w-20 truncate">
+                            {entry.comments || '-'}
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => toggleRowExpansion(entry.id)}
+                            className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors print:hidden ${
+                              hasComments 
+                                ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' 
+                                : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                            }`}
+                            title={hasComments ? 'Has comments' : 'Add comment'}
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="w-4 h-4" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4" />
+                            )}
+                            {hasComments && (
+                              <MessageSquare className="w-3 h-3 absolute" />
+                            )}
+                          </button>
+                        )}
+                      </td>
+                    )}
 
                     {!readOnly && (
                       <td className="px-3 py-4 text-center print:hidden">
@@ -753,7 +782,7 @@ export default function TimesheetGrid({ timesheet, onEntryUpdate, readOnly = fal
                   </tr>
                   
                   {/* Expanded Comments Row */}
-                  {isExpanded && (
+                  {!isPrintMode && isExpanded && (
                     <tr className={`${isWeekendDay ? 'bg-blue-25' : 'bg-gray-25'}`}>
                       <td colSpan={readOnly ? 10 : 11} className="px-6 py-4">
                         <div className="max-w-2xl">

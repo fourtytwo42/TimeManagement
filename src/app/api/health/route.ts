@@ -1,29 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { checkDatabaseConnection } from '@/lib/db'
+import { NextResponse } from 'next/server'
+import { checkDatabaseConnection } from '@/lib/db-health'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const startTime = Date.now()
     
     // Check database connection
-    const isDatabaseHealthy = await checkDatabaseConnection()
+    const dbHealthResult = await checkDatabaseConnection()
     const responseTime = Date.now() - startTime
     
     const health = {
-      status: isDatabaseHealthy ? 'healthy' : 'unhealthy',
+      status: dbHealthResult.isHealthy ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
       database: {
-        connected: isDatabaseHealthy,
-        responseTime: `${responseTime}ms`
+        connected: dbHealthResult.isHealthy,
+        responseTime: `${responseTime}ms`,
+        connectionTime: dbHealthResult.connectionTime ? `${dbHealthResult.connectionTime}ms` : undefined,
+        error: dbHealthResult.error
       },
       application: {
         uptime: process.uptime(),
         memory: process.memoryUsage(),
-        version: process.env.npm_package_version || '1.0.0'
+        version: process.env.npmpackage_version || '1.0.0'
       }
     }
     
-    const statusCode = isDatabaseHealthy ? 200 : 503
+    const statusCode = dbHealthResult.isHealthy ? 200 : 503
     
     return NextResponse.json(health, { status: statusCode })
   } catch (error) {

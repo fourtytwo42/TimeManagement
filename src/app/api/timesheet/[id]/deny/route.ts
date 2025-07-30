@@ -6,9 +6,11 @@ import { prisma } from '@/lib/db'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -29,47 +31,48 @@ export async function POST(
     const body = await request.json()
     const { note } = body
 
-    if (!note || note.trim() === '') {
-      return NextResponse.json({ error: 'Denial note is required' }, { status: 400 })
-    }
+    const updatedTimesheet = await denyTimesheet(id, user.id, note)
 
-    const updatedTimesheet = await denyTimesheet(params.id, user.id, note)
-    
-    if (!updatedTimesheet) {
-      return NextResponse.json({ error: 'Failed to deny timesheet' }, { status: 400 })
-    }
-
-    // Get timesheet details for notifications
-    const timesheet = await prisma.timesheet.findUnique({
-      where: { id: params.id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true
+    // Create notifications
+    try {
+      const timesheet = await prisma.timesheet.findUnique({
+        where: { id },
+        include: {
+          user: {
+            select: { id: true }
           }
         }
+      })
+      
+      if (timesheet) {
+        // Notify the timesheet owner of denial
+        await createTimesheetNotification(
+          timesheet.user.id,
+          'denial',
+          id
+        )
+
+        // Fulfill manager denial notifications
+        await fulfillNotifications(user.id, id, 'timesheetdenied')
       }
-    })
-
-    if (timesheet) {
-      // Notify staff member of denial
-      await createTimesheetNotification(
-        timesheet.userId,
-        'denial',
-        params.id,
-        `Your timesheet was returned with the following note: ${note}`
-      )
-
-      // Fulfill manager approval notifications
-      await fulfillNotifications(user.id, params.id, 'timesheet_denied')
+    } catch (notificationError) {
+      console.error('Failed to create denial notifications:', notificationError)
+      // Don't fail the denial if notification fails
     }
 
-    return NextResponse.json({ message: 'Timesheet denied successfully' })
+    return NextResponse.json({
+      message: 'Timesheet denied successfully',
+      timesheet: updatedTimesheet
+    })
   } catch (error) {
     console.error('Error denying timesheet:', error)
+    
+    if (error instanceof Error && error.message.includes('not found')) {
+      return NextResponse.json({ error: error.message }, { status: 404 })
+    }
+    
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to deny timesheet' },
       { status: 500 }
     )
   }

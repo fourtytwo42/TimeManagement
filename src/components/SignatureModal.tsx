@@ -1,107 +1,129 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import SignatureCanvas from 'react-signature-canvas'
+import React, { useRef, useState } from 'react'
+import { X } from 'lucide-react'
 
 interface SignatureModalProps {
   isOpen: boolean
   onClose: () => void
   onSave: (signature: string) => void
   title?: string
-  description?: string
 }
 
-export default function SignatureModal({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  title = "Digital Signature",
-  description = "Please sign below to confirm your timesheet submission."
-}: SignatureModalProps) {
-  const sigCanvas = useRef<SignatureCanvas>(null)
-  const [isEmpty, setIsEmpty] = useState(true)
+export default function SignatureModal({ isOpen, onClose, onSave, title = 'Add Signature' }: SignatureModalProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [hasSignature, setHasSignature] = useState(false)
 
   if (!isOpen) return null
 
-  const handleClear = () => {
-    sigCanvas.current?.clear()
-    setIsEmpty(true)
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    setIsDrawing(true)
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    ctx.strokeStyle = '#000'
+  }
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return
+
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    ctx.lineTo(x, y)
+    ctx.stroke()
+    setHasSignature(true)
+  }
+
+  const stopDrawing = () => {
+    setIsDrawing(false)
+  }
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    setHasSignature(false)
   }
 
   const handleSave = () => {
-    if (sigCanvas.current && !isEmpty) {
-      const signature = sigCanvas.current.toDataURL()
-      onSave(signature)
-      onClose()
-    }
-  }
+    const canvas = canvasRef.current
+    if (!canvas || !hasSignature) return
 
-  const handleBegin = () => {
-    setIsEmpty(false)
+    const signatureData = canvas.toDataURL('image/png')
+    onSave(signatureData)
+    onClose()
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        {/* Background overlay */}
-        <div 
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          onClick={onClose}
-        />
+    <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+      <div className='bg-white rounded-lg p-6 w-full max-w-md'>
+        <div className='flex items-center justify-between mb-4'>
+          <h3 className='text-lg font-semibold'>{title}</h3>
+          <button
+            onClick={onClose}
+            className='text-gray-500 hover:text-gray-700'
+          >
+            <X className='h-6 w-6' />
+          </button>
+        </div>
 
-        {/* Modal panel */}
-        <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-          <div>
-            <div className="mt-3 text-center sm:mt-0 sm:text-left">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                {title}
-              </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                {description}
-              </p>
-              
-              {/* Signature Canvas */}
-              <div className="border-2 border-gray-300 border-dashed rounded-lg p-2 mb-4">
-                <SignatureCanvas
-                  ref={sigCanvas}
-                  canvasProps={{
-                    width: 400,
-                    height: 200,
-                    className: 'signature-canvas w-full h-48 bg-white rounded'
-                  }}
-                  onBegin={handleBegin}
-                />
-              </div>
-              
-              <div className="text-xs text-gray-400 text-center mb-4">
-                Sign above using your mouse, trackpad, or touch screen
-              </div>
-            </div>
-          </div>
+        <div className='border-2 border-gray-300 rounded-lg mb-4'>
+          <canvas
+            ref={canvasRef}
+            width={400}
+            height={200}
+            className='w-full h-48 cursor-crosshair'
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+          />
+        </div>
 
-          {/* Action buttons */}
-          <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+        <div className='flex justify-between'>
+          <button
+            onClick={clearCanvas}
+            className='px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50'
+          >
+            Clear
+          </button>
+          <div className='space-x-2'>
             <button
-              type="button"
-              onClick={handleSave}
-              disabled={isEmpty}
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Save Signature
-            </button>
-            <button
-              type="button"
-              onClick={handleClear}
-              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:w-auto sm:text-sm"
-            >
-              Clear
-            </button>
-            <button
-              type="button"
               onClick={onClose}
-              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+              className='px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50'
             >
               Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={!hasSignature}
+              className='px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed'
+            >
+              Save
             </button>
           </div>
         </div>

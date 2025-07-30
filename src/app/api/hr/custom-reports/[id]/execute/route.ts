@@ -3,7 +3,7 @@ import { verifyToken } from '@/lib/jwt-auth'
 import { prisma } from '@/lib/db'
 import Papa from 'papaparse'
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 import { format } from 'date-fns'
 
 // Extend jsPDF type to include autoTable
@@ -21,9 +21,11 @@ const ROLES = {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -46,7 +48,7 @@ export async function POST(
 
     // Get the custom report
     const customReport = await prisma.customReport.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         creator: {
           select: {
@@ -128,8 +130,8 @@ export async function POST(
         }
       })
 
-      reportData = timesheets.map(timesheet => {
-        const totalHours = timesheet.entries.reduce((sum, entry) => {
+      reportData = timesheets.map((timesheet: any) => {
+        const totalHours = timesheet.entries.reduce((sum: number, entry: any) => {
           let dailyHours = entry.plawaHours || 0
           if (entry.in1 && entry.out1) {
             dailyHours += (new Date(entry.out1).getTime() - new Date(entry.in1).getTime()) / (1000 * 60 * 60)
@@ -143,7 +145,7 @@ export async function POST(
           return sum + dailyHours
         }, 0)
 
-        const plawaHours = timesheet.entries.reduce((sum, entry) => sum + (entry.plawaHours || 0), 0)
+        const plawaHours = timesheet.entries.reduce((sum: number, entry: any) => sum + (entry.plawaHours || 0), 0)
         const regularHours = totalHours - plawaHours
 
         const row: any = {}
@@ -253,7 +255,7 @@ export async function POST(
       return new NextResponse(csv, {
         headers: {
           'Content-Type': 'text/csv',
-          'Content-Disposition': `attachment; filename="${customReport.name.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv"`
+          'Content-Disposition': `attachment; filename='${customReport.name.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv'`
         }
       })
     } else if (outputFormat === 'pdf') {
@@ -275,8 +277,8 @@ export async function POST(
       const headers = Object.keys(reportData[0] || {})
       const tableData = reportData.map(row => headers.map(header => row[header] || ''))
       
-      // Add table
-      doc.autoTable({
+      // Add table using the imported autoTable function
+      autoTable(doc, {
         head: [headers],
         body: tableData,
         startY: parameters.startDate && parameters.endDate ? 65 : 55,
@@ -289,7 +291,7 @@ export async function POST(
       return new NextResponse(pdfBuffer, {
         headers: {
           'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="${customReport.name.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf"`
+          'Content-Disposition': `attachment; filename='${customReport.name.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf'`
         }
       })
     }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/jwt-auth'
 import { prisma } from '@/lib/db'
-import { createTimesheetNotification } from '@/lib/notifications'
+import { createTimesheetNotification, fulfillNotifications } from '@/lib/notifications'
 import { sendFinalApprovedTimesheetNotification, isEmailEnabled } from '@/lib/mailer'
 import { format } from 'date-fns'
 
@@ -13,9 +13,11 @@ const TS_STATE = {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -33,16 +35,28 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { signature } = await request.json()
+    const body = await request.json()
+    const { signature } = body
 
     if (!signature) {
-      return NextResponse.json({ error: 'Signature is required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Digital signature is required' },
+        { status: 400 }
+      )
     }
 
+    // Get the timesheet with user details
     const timesheet = await prisma.timesheet.findUnique({
-      where: { id: params.id },
-      include: { 
-        user: true,
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            payRate: true
+          }
+        },
         entries: true
       }
     })
@@ -51,15 +65,15 @@ export async function POST(
       return NextResponse.json({ error: 'Timesheet not found' }, { status: 404 })
     }
 
-    if (timesheet.state !== TS_STATE.PENDING_HR) {
+    if (timesheet.state !== 'PENDING_HR') {
       return NextResponse.json(
         { error: 'Timesheet is not pending HR approval' },
         { status: 400 }
       )
     }
 
-    // Calculate timesheet totals for email
-    const totalHours = timesheet.entries.reduce((total, entry) => {
+    // Calculate total hours
+    const totalHours = timesheet.entries.reduce((sum, entry) => {
       let dailyHours = entry.plawaHours || 0
       if (entry.in1 && entry.out1) {
         dailyHours += (new Date(entry.out1).getTime() - new Date(entry.in1).getTime()) / (1000 * 60 * 60)
@@ -70,69 +84,66 @@ export async function POST(
       if (entry.in3 && entry.out3) {
         dailyHours += (new Date(entry.out3).getTime() - new Date(entry.in3).getTime()) / (1000 * 60 * 60)
       }
-      return total + dailyHours
+      return sum + dailyHours
     }, 0)
 
-    const plawaHours = timesheet.entries.reduce((total, entry) => total + (entry.plawaHours || 0), 0)
+    const plawaHours = timesheet.entries.reduce((sum, entry) => sum + (entry.plawaHours || 0), 0)
     const regularHours = totalHours - plawaHours
 
-    // Update timesheet with HR signature and timestamp
-    await prisma.$executeRaw`
-      UPDATE Timesheet 
-      SET state = ${TS_STATE.APPROVED}, 
-          hrSig = ${signature}, 
-          hrSigAt = ${new Date().toISOString()},
-          updatedAt = ${new Date().toISOString()}
-      WHERE id = ${params.id}
-    `
+    // Update timesheet to approved state
+    const updatedTimesheet = await prisma.timesheet.update({
+      where: { id },
+      data: {
+        state: 'APPROVED',
+        hrSig: signature,
+        hrSigAt: new Date()
+      }
+    })
+
+    // Send final approval notification email
+    try {
+      await sendFinalApprovedTimesheetNotification(
+        timesheet.user.email,
+        timesheet.user.name,
+        `${new Date(timesheet.periodStart).toLocaleDateString()} - ${new Date(timesheet.periodEnd).toLocaleDateString()}`,
+        totalHours,
+        plawaHours,
+        regularHours,
+        user.name
+      )
+      console.log(`Final approval email sent to ${timesheet.user.email} for timesheet ${id}`)
+    } catch (emailError) {
+      console.error('Failed to send final approval email:', emailError)
+      // Don't fail the approval if email fails
+    }
 
     // Create notification for the timesheet owner
     try {
       await createTimesheetNotification(
         timesheet.user.id,
         'final_approval',
-        params.id
+        id
       )
     } catch (notificationError) {
       console.error('Failed to create final approval notification:', notificationError)
-      // Don't fail the approval if notification fails
     }
 
-    // Send email notification if enabled
-    try {
-      if (isEmailEnabled()) {
-        const timesheetPeriod = `${format(new Date(timesheet.periodStart), 'MMM dd, yyyy')} - ${format(new Date(timesheet.periodEnd), 'MMM dd, yyyy')}`
-        
-        await sendFinalApprovedTimesheetNotification(
-          timesheet.user.email,
-          timesheet.user.name,
-          timesheetPeriod,
-          Math.round(totalHours * 100) / 100,
-          Math.round(plawaHours * 100) / 100,
-          Math.round(regularHours * 100) / 100,
-          user.name
-        )
-        
-        console.log(`Final approval email sent to ${timesheet.user.email} for timesheet ${params.id}`)
-      }
-    } catch (emailError) {
-      console.error('Failed to send final approval email:', emailError)
-      // Don't fail the approval if email fails
-    }
-
-    // Fetch the updated timesheet
-    const updatedTimesheet = await prisma.timesheet.findUnique({
-      where: { id: params.id }
-    })
+    // Fulfill HR approval notifications
+    await fulfillNotifications(user.id, id, 'timesheet_approved')
 
     return NextResponse.json({
-      message: 'Timesheet approved successfully',
+      message: 'Timesheet approved by HR successfully',
       timesheet: updatedTimesheet
     })
   } catch (error) {
-    console.error('Error approving timesheet:', error)
+    console.error('Error approving timesheet by HR:', error)
+    
+    if (error instanceof Error && error.message.includes('not found')) {
+      return NextResponse.json({ error: error.message }, { status: 404 })
+    }
+    
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to approve timesheet' },
       { status: 500 }
     )
   }

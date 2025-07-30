@@ -7,8 +7,7 @@ const ROLES = {
   HR: 'HR',
   ADMIN: 'ADMIN'
 } as const
-import { isEmailEnabled } from '@/lib/mailer'
-import { mailerService } from '@/lib/mailer'
+import { isEmailEnabled, sendEmail } from '@/lib/mailer'
 import Papa from 'papaparse'
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns'
 
@@ -197,13 +196,38 @@ export async function POST(request: NextRequest) {
     // If email is requested and enabled
     if (emailTo && isEmailEnabled()) {
       try {
-        await mailerService.sendReportEmail(
-          emailTo,
-          user.name || 'User',
-          reportTitle,
-          Buffer.from(reportContent),
-          filename
-        )
+        await sendEmail({
+          to: emailTo,
+          subject: `Timesheet Report - ${reportTitle}`,
+          html: `
+            <div style='font-family: Arial, sans-serif;
+max-width: 600px; margin: 0 auto;'>
+              <div style='background-color: #f8f9fa; padding: 20px; border-radius: 8px;'>
+                <h2 style='color: #333; margin-bottom: 20px;'>Timesheet Report</h2>
+                
+                <p>Hi ${user.name || 'User'},</p>
+                
+                <p>Your requested ${reportTitle} report is attached to this email.</p>
+                
+                <div style='background-color: white; padding: 15px; border-left: 4px solid #28a745; margin: 20px 0;'>
+                  <p><strong>Report Type:</strong> ${reportTitle}</p>
+                  <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                  <p><strong>Filename:</strong> ${filename}</p>
+                </div>
+                
+                <p>Please find the report attached as a ${filename.split('.').pop()?.toUpperCase()} file.</p>
+                
+                <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px;'>
+                  <p>This is an automated notification from the Timesheet Management System.</p>
+                </div>
+              </div>
+            </div>
+          `,
+          attachments: [{
+            filename,
+            content: Buffer.from(reportContent)
+          }]
+        }, 'report')
         
         return NextResponse.json({ 
           message: 'Report generated and emailed successfully',
@@ -222,7 +246,7 @@ export async function POST(request: NextRequest) {
     return new NextResponse(reportContent, {
       headers: {
         'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${filename}"`
+        'Content-Disposition': `attachment; filename='${filename}'`
       }
     })
 

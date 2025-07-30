@@ -125,6 +125,11 @@ export async function withDatabaseHealth<T>(
   }
 }
 
+// Export function for API routes
+export async function checkDatabaseConnection(): Promise<DatabaseHealth> {
+  return await dbHealthMonitor.checkHealth()
+}
+
 // Auto-start monitoring in production
 if (process.env.NODE_ENV === 'production') {
   dbHealthMonitor.startMonitoring()

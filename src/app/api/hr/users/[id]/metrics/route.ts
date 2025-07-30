@@ -11,9 +11,11 @@ import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -36,7 +38,7 @@ export async function GET(
 
     // Get user details
     const targetUser = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         name: true,
@@ -68,7 +70,7 @@ export async function GET(
     // Get all timesheets for the user in the date range
     const timesheets = await prisma.timesheet.findMany({
       where: {
-        userId: params.id,
+        userId: id,
         periodStart: {
           gte: startDate
         }
@@ -94,7 +96,7 @@ export async function GET(
     // Get current year timesheets for yearly PLAWA tracking
     const yearlyTimesheets = await prisma.timesheet.findMany({
       where: {
-        userId: params.id,
+        userId: id,
         periodStart: {
           gte: yearStart,
           lte: yearEnd

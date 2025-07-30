@@ -13,7 +13,7 @@ class ApiClient {
   private getAuthHeaders(): HeadersInit {
     const token = this.getToken()
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     }
 
     if (token) {
@@ -59,7 +59,7 @@ class ApiClient {
     const response = await fetch(url, {
       ...restOptions,
       headers: requestHeaders,
-      body: requestBody,
+      body: requestBody
     })
 
     if (!response.ok) {
@@ -106,7 +106,7 @@ class ApiClient {
     return this.request<T>(url, {
       method: 'POST',
       body: data,
-      ...options,
+      ...options
     })
   }
 
@@ -114,7 +114,7 @@ class ApiClient {
     return this.request<T>(url, {
       method: 'PATCH',
       body: data,
-      ...options,
+      ...options
     })
   }
 
@@ -122,14 +122,14 @@ class ApiClient {
     return this.request<T>(url, {
       method: 'PUT',
       body: data,
-      ...options,
+      ...options
     })
   }
 
   async delete<T = any>(url: string, options?: ApiRequestOptions): Promise<T> {
     return this.request<T>(url, {
       method: 'DELETE',
-      ...options,
+      ...options
     })
   }
 }

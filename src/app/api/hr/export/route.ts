@@ -145,7 +145,8 @@ export async function GET(request: NextRequest) {
         return new NextResponse(csv, {
           headers: {
             'Content-Type': 'text/csv',
-            'Content-Disposition': `attachment; filename="payperiod-summary-${periodStart || 'all'}-${periodEnd || 'all'}.csv"`
+            'Content-Disposition': `attachment;
+filename="payperiod-summary-${periodStart || 'all'}-${periodEnd || 'all'}.csv"`
           }
         })
       } else if (format === 'pdf') {

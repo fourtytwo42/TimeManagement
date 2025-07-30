@@ -4,9 +4,11 @@ import { prisma } from '@/lib/db'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -23,7 +25,7 @@ export async function DELETE(
     // Check if notification exists and belongs to user
     const notification = await prisma.notification.findFirst({
       where: {
-        id: params.id,
+        id,
         userId: user.id
       }
     })
@@ -34,7 +36,7 @@ export async function DELETE(
 
     // Delete notification
     await prisma.notification.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({ message: 'Notification deleted successfully' })

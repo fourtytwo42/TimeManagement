@@ -50,7 +50,7 @@ export async function createNotification(data: CreateNotificationData) {
 export async function fulfillNotifications(
   userId: string,
   resourceId: string,
-  actionType: 'timesheet_viewed' | 'timesheet_approved' | 'timesheet_denied' | 'message_sent'
+  actionType: 'timesheet_viewed' | 'timesheet_approved' | 'timesheetdenied' | 'message_sent'
 ) {
   try {
     // Define which notification types should be fulfilled based on the action
@@ -59,12 +59,12 @@ export async function fulfillNotifications(
         'manager_approval_needed',
         'hr_approval_needed',
         'timesheet_message',
-        'timesheet_denial'
+        'timesheetdenial'
       ],
       timesheet_approved: [
         'manager_approval_needed'
       ],
-      timesheet_denied: [
+      timesheetdenied: [
         'manager_approval_needed'
       ],
       message_sent: [
@@ -133,7 +133,7 @@ export async function createTimesheetMessageNotification(
     userId: recipientUserId,
     type: 'timesheet_message',
     title: 'New Timesheet Message',
-    message: `${senderName} sent a message: "${messageContent.substring(0, 100)}${messageContent.length > 100 ? '...' : ''}"`,
+    message: `${senderName} sent a message: '${messageContent.substring(0, 100)}${messageContent.length > 100 ? '...' : ''}'`,
     resourceId: timesheetId
   })
 }

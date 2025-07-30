@@ -1,9 +1,9 @@
-import NextAuth from "next-auth"
+import NextAuth from 'next-auth'
 
 // Local type definition to replace Prisma enum
 type Role = 'STAFF' | 'MANAGER' | 'HR' | 'ADMIN'
 
-declare module "next-auth" {
+declare module 'next-auth' {
   interface Session {
     user: {
       id: string
@@ -23,7 +23,7 @@ declare module "next-auth" {
   }
 }
 
-declare module "next-auth/jwt" {
+declare module 'next-auth/jwt' {
   interface JWT {
     id: string
     role: Role

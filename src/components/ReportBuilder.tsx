@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Plus, X, Filter, BarChart3, FileText, Users, Calendar } from 'lucide-react'
 
 interface ReportBuilderProps {
-  onSave: (config: any) => void
+  onSave: (_config: any) => void
   onCancel: () => void
 }
 
@@ -107,7 +107,7 @@ export default function ReportBuilder({ onSave, onCancel }: ReportBuilderProps) 
 
   const getColumnsByCategory = () => {
     const columns = AVAILABLE_COLUMNS[config.reportType]
-    const categories = [...new Set(columns.map(col => col.category))]
+    const categories = Array.from(new Set(columns.map(col => col.category)))
     
     return categories.map(category => ({
       name: category,
@@ -118,28 +118,28 @@ export default function ReportBuilder({ onSave, onCancel }: ReportBuilderProps) 
   const isValid = config.name.trim() !== '' && config.columns.length > 0
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className='max-w-4xl mx-auto'>
       {/* Progress Steps */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
+      <div className='mb-8'>
+        <div className='flex items-center justify-between'>
           {[
             { step: 1, title: 'Basic Info', icon: FileText },
             { step: 2, title: 'Select Columns', icon: BarChart3 },
             { step: 3, title: 'Configure Filters', icon: Filter },
             { step: 4, title: 'Review & Save', icon: Plus }
           ].map(({ step, title, icon: Icon }) => (
-            <div key={step} className="flex items-center">
+            <div key={step} className='flex items-center'>
               <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
                 activeStep >= step 
                   ? 'bg-primary-600 border-primary-600 text-white' 
                   : 'border-gray-300 text-gray-500'
               }`}>
                 {activeStep > step ? (
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <svg className='w-6 h-6' fill='currentColor' viewBox='0 0 20 20'>
+                    <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
                   </svg>
                 ) : (
-                  <Icon className="w-5 h-5" />
+                  <Icon className='w-5 h-5' />
                 )}
               </div>
               <span className={`ml-2 text-sm font-medium ${
@@ -147,48 +147,48 @@ export default function ReportBuilder({ onSave, onCancel }: ReportBuilderProps) 
               }`}>
                 {title}
               </span>
-              {step < 4 && <div className="flex-1 h-px bg-gray-300 mx-4" />}
+              {step < 4 && <div className='flex-1 h-px bg-gray-300 mx-4' />}
             </div>
           ))}
         </div>
       </div>
 
       {/* Step Content */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
+      <div className='bg-white rounded-lg shadow-lg p-6'>
         {activeStep === 1 && (
-          <div className="space-y-6">
+          <div className='space-y-6'>
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Report Basic Information</h3>
-              <div className="space-y-4">
+              <h3 className='text-lg font-medium text-gray-900 mb-4'>Report Basic Information</h3>
+              <div className='space-y-4'>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
                     Report Name *
                   </label>
                   <input
-                    type="text"
+                    type='text'
                     value={config.name}
                     onChange={(e) => setConfig(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="e.g., Monthly Payroll Summary"
+                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500'
+                    placeholder='e.g., Monthly Payroll Summary'
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
                     Description
                   </label>
                   <textarea
                     value={config.description}
                     onChange={(e) => setConfig(prev => ({ ...prev, description: e.target.value }))}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Describe what this report shows and when to use it"
+                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500'
+                    placeholder='Describe what this report shows and when to use it'
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
                     Report Type *
                   </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                     <div
                       onClick={() => setConfig(prev => ({ ...prev, reportType: 'timesheet_summary', columns: [] }))}
                       className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
@@ -197,11 +197,11 @@ export default function ReportBuilder({ onSave, onCancel }: ReportBuilderProps) 
                           : 'border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <div className="flex items-center mb-2">
-                        <FileText className="w-5 h-5 mr-2 text-primary-600" />
-                        <h4 className="font-medium">Timesheet Summary</h4>
+                      <div className='flex items-center mb-2'>
+                        <FileText className='w-5 h-5 mr-2 text-primary-600' />
+                        <h4 className='font-medium'>Timesheet Summary</h4>
                       </div>
-                      <p className="text-sm text-gray-600">
+                      <p className='text-sm text-gray-600'>
                         Individual timesheet records with detailed hours and signatures
                       </p>
                     </div>
@@ -213,11 +213,11 @@ export default function ReportBuilder({ onSave, onCancel }: ReportBuilderProps) 
                           : 'border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <div className="flex items-center mb-2">
-                        <Users className="w-5 h-5 mr-2 text-primary-600" />
-                        <h4 className="font-medium">User Summary</h4>
+                      <div className='flex items-center mb-2'>
+                        <Users className='w-5 h-5 mr-2 text-primary-600' />
+                        <h4 className='font-medium'>User Summary</h4>
                       </div>
-                      <p className="text-sm text-gray-600">
+                      <p className='text-sm text-gray-600'>
                         Aggregated data by employee with totals and statistics
                       </p>
                     </div>
@@ -229,27 +229,27 @@ export default function ReportBuilder({ onSave, onCancel }: ReportBuilderProps) 
         )}
 
         {activeStep === 2 && (
-          <div className="space-y-6">
+          <div className='space-y-6'>
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Select Report Columns</h3>
-              <p className="text-sm text-gray-600 mb-6">
+              <h3 className='text-lg font-medium text-gray-900 mb-4'>Select Report Columns</h3>
+              <p className='text-sm text-gray-600 mb-6'>
                 Choose which data fields to include in your report. You can select multiple columns from each category.
               </p>
               
-              <div className="space-y-6">
+              <div className='space-y-6'>
                 {getColumnsByCategory().map((category) => (
-                  <div key={category.name} className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-900 mb-3">{category.name}</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div key={category.name} className='border border-gray-200 rounded-lg p-4'>
+                    <h4 className='font-medium text-gray-900 mb-3'>{category.name}</h4>
+                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
                       {category.columns.map((column) => (
-                        <label key={column.id} className="flex items-center">
+                        <label key={column.id} className='flex items-center'>
                           <input
-                            type="checkbox"
+                            type='checkbox'
                             checked={config.columns.includes(column.id)}
                             onChange={() => handleColumnToggle(column.id)}
-                            className="mr-3 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            className='mr-3 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded'
                           />
-                          <span className="text-sm text-gray-700">{column.label}</span>
+                          <span className='text-sm text-gray-700'>{column.label}</span>
                         </label>
                       ))}
                     </div>
@@ -258,8 +258,8 @@ export default function ReportBuilder({ onSave, onCancel }: ReportBuilderProps) 
               </div>
               
               {config.columns.length > 0 && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
-                  <p className="text-sm text-green-800">
+                <div className='mt-4 p-3 bg-green-50 border border-green-200 rounded-md'>
+                  <p className='text-sm text-green-800'>
                     Selected {config.columns.length} column{config.columns.length !== 1 ? 's' : ''}
                   </p>
                 </div>
@@ -269,14 +269,14 @@ export default function ReportBuilder({ onSave, onCancel }: ReportBuilderProps) 
         )}
 
         {activeStep === 3 && (
-          <div className="space-y-6">
+          <div className='space-y-6'>
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Configure Filters</h3>
-              <p className="text-sm text-gray-600 mb-6">
+              <h3 className='text-lg font-medium text-gray-900 mb-4'>Configure Filters</h3>
+              <p className='text-sm text-gray-600 mb-6'>
                 Select which filters users can apply when running this report. Filters allow users to narrow down the data.
               </p>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 {FILTER_OPTIONS.map((filter) => {
                   const Icon = filter.icon
                   return (
@@ -289,11 +289,11 @@ export default function ReportBuilder({ onSave, onCancel }: ReportBuilderProps) 
                           : 'border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <div className="flex items-center mb-2">
-                        <Icon className="w-5 h-5 mr-2 text-primary-600" />
-                        <h4 className="font-medium">{filter.label}</h4>
+                      <div className='flex items-center mb-2'>
+                        <Icon className='w-5 h-5 mr-2 text-primary-600' />
+                        <h4 className='font-medium'>{filter.label}</h4>
                       </div>
-                      <p className="text-sm text-gray-600">{filter.description}</p>
+                      <p className='text-sm text-gray-600'>{filter.description}</p>
                     </div>
                   )
                 })}
@@ -303,37 +303,37 @@ export default function ReportBuilder({ onSave, onCancel }: ReportBuilderProps) 
         )}
 
         {activeStep === 4 && (
-          <div className="space-y-6">
+          <div className='space-y-6'>
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Review & Save Report</h3>
+              <h3 className='text-lg font-medium text-gray-900 mb-4'>Review & Save Report</h3>
               
-              <div className="bg-gray-50 rounded-lg p-6 space-y-4">
+              <div className='bg-gray-50 rounded-lg p-6 space-y-4'>
                 <div>
-                  <h4 className="font-medium text-gray-900">Report Name</h4>
-                  <p className="text-gray-600">{config.name}</p>
+                  <h4 className='font-medium text-gray-900'>Report Name</h4>
+                  <p className='text-gray-600'>{config.name}</p>
                 </div>
                 
                 {config.description && (
                   <div>
-                    <h4 className="font-medium text-gray-900">Description</h4>
-                    <p className="text-gray-600">{config.description}</p>
+                    <h4 className='font-medium text-gray-900'>Description</h4>
+                    <p className='text-gray-600'>{config.description}</p>
                   </div>
                 )}
                 
                 <div>
-                  <h4 className="font-medium text-gray-900">Report Type</h4>
-                  <p className="text-gray-600">
+                  <h4 className='font-medium text-gray-900'>Report Type</h4>
+                  <p className='text-gray-600'>
                     {config.reportType === 'timesheet_summary' ? 'Timesheet Summary' : 'User Summary'}
                   </p>
                 </div>
                 
                 <div>
-                  <h4 className="font-medium text-gray-900">Selected Columns ({config.columns.length})</h4>
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <h4 className='font-medium text-gray-900'>Selected Columns ({config.columns.length})</h4>
+                  <div className='flex flex-wrap gap-2 mt-2'>
                     {config.columns.map((columnId) => {
                       const column = AVAILABLE_COLUMNS[config.reportType].find(c => c.id === columnId)
                       return (
-                        <span key={columnId} className="px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full">
+                        <span key={columnId} className='px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full'>
                           {column?.label}
                         </span>
                       )
@@ -342,20 +342,20 @@ export default function ReportBuilder({ onSave, onCancel }: ReportBuilderProps) 
                 </div>
                 
                 <div>
-                  <h4 className="font-medium text-gray-900">Available Filters</h4>
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <h4 className='font-medium text-gray-900'>Available Filters</h4>
+                  <div className='flex flex-wrap gap-2 mt-2'>
                     {Object.entries(config.filters)
                       .filter(([_, enabled]) => enabled)
                       .map(([filterId]) => {
                         const filter = FILTER_OPTIONS.find(f => f.id === filterId)
                         return (
-                          <span key={filterId} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                          <span key={filterId} className='px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full'>
                             {filter?.label}
                           </span>
                         )
                       })}
                     {Object.values(config.filters).every(v => !v) && (
-                      <span className="text-gray-500 text-sm">No filters enabled</span>
+                      <span className='text-gray-500 text-sm'>No filters enabled</span>
                     )}
                   </div>
                 </div>
@@ -365,30 +365,30 @@ export default function ReportBuilder({ onSave, onCancel }: ReportBuilderProps) 
         )}
 
         {/* Navigation */}
-        <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
-          <div className="flex space-x-3">
+        <div className='flex justify-between items-center mt-8 pt-6 border-t border-gray-200'>
+          <div className='flex space-x-3'>
             <button
               onClick={onCancel}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className='px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50'
             >
               Cancel
             </button>
             {activeStep > 1 && (
               <button
                 onClick={() => setActiveStep(prev => prev - 1)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className='px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50'
               >
                 Previous
               </button>
             )}
           </div>
           
-          <div className="flex space-x-3">
+          <div className='flex space-x-3'>
             {activeStep < 4 ? (
               <button
                 onClick={() => setActiveStep(prev => prev + 1)}
                 disabled={activeStep === 1 && !config.name}
-                className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className='px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 Next
               </button>
@@ -396,7 +396,7 @@ export default function ReportBuilder({ onSave, onCancel }: ReportBuilderProps) 
               <button
                 onClick={handleSave}
                 disabled={!isValid}
-                className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className='px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 Save Report
               </button>

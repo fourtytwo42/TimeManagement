@@ -219,13 +219,64 @@
 @media print {
   /* Page setup */
   @page {
-    size: A4 landscape;
-    margin: 0.5in;
+    size: A4 portrait;
+    margin: 0.25in;
+  }
+  
+  /* Prevent blank pages */
+  @page :first {
+    margin-top: 0.25in;
+  }
+  
+  @page :left {
+    margin-left: 0.25in;
+  }
+  
+  @page :right {
+    margin-right: 0.25in;
   }
   
   body {
-    font-size: 10px !important;
+    font-size: 9px !important;
     line-height: 1.2 !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    height: auto !important;
+  }
+  
+  /* Prevent unnecessary page breaks */
+  .signatures-section {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  .timesheet-table {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  /* Ensure content doesn't create extra pages */
+  #timesheet-content {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  /* Prevent blank pages by ensuring content fits */
+  .container {
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  /* Prevent any min-height from causing extra pages */
+  .min-h-screen {
+    min-height: auto !important;
   }
   
   .print\:shadow-none {
@@ -268,13 +319,28 @@
     background-color: #ffffff !important;
   }
   
+  .print\:bg-transparent {
+    background-color: transparent !important;
+  }
+  
   .print\:max-h-12 {
     max-height: 3rem !important;
   }
   
   /* Hide action buttons when printing */
   .print\:hide-actions,
-  .no-print {
+  .no-print,
+  button[onclick*="handlePrint"],
+  button[onclick*="handleSavePDF"],
+  button[onclick*="handleEmailReport"],
+  button[onclick*="setShowDenialModal"],
+  button[onclick*="setShowApprovalModal"],
+  .flex.items-center.space-x-3.pt-4.border-t.border-gray-200,
+  div:has(button[onclick*="handlePrint"]),
+  div:has(button[onclick*="handleSavePDF"]),
+  div:has(button[onclick*="handleEmailReport"]),
+  div:has(button[onclick*="setShowDenialModal"]),
+  div:has(button[onclick*="setShowApprovalModal"]) {
     display: none !important;
   }
   
@@ -285,112 +351,409 @@
     print-color-adjust: exact !important;
   }
   
-  /* Timesheet table print optimizations */
+  /* Timesheet table print optimizations - compact layout */
   .timesheet-table {
     width: 100% !important;
-    font-size: 8px !important;
+    font-size: 7px !important;
+    margin-top: 4px !important;
+    border-collapse: collapse !important;
   }
   
   .timesheet-table th,
   .timesheet-table td {
-    padding: 2px 4px !important;
-    font-size: 8px !important;
+    padding: 2px 3px !important;
+    font-size: 7px !important;
     border: 1px solid #000 !important;
+    line-height: 1.1 !important;
   }
   
   .timesheet-table th {
     background-color: #f3f4f6 !important;
     font-weight: bold !important;
     text-align: center !important;
+    font-size: 7px !important;
+    padding: 3px 2px !important;
   }
   
   .timesheet-table .date-column {
-    width: 12% !important;
-    min-width: 80px !important;
+    width: 11% !important;
+    min-width: 70px !important;
   }
   
   .timesheet-table .time-column {
-    width: 8% !important;
-    min-width: 50px !important;
+    width: 11% !important;
+    min-width: 55px !important;
     text-align: center !important;
+    font-size: 6px !important;
   }
   
   .timesheet-table .plawa-column {
-    width: 6% !important;
+    width: 7% !important;
     min-width: 40px !important;
     text-align: center !important;
   }
   
   .timesheet-table .total-column {
-    width: 8% !important;
+    width: 9% !important;
     min-width: 50px !important;
     text-align: center !important;
   }
   
   .timesheet-table .comments-column {
-    width: 20% !important;
-    min-width: 100px !important;
+    display: none !important;
   }
   
-  /* Compact timesheet header for print */
+  /* Hide expanded comments rows in print */
+  .timesheet-table tr[class*="bg-blue-25"],
+  .timesheet-table tr[class*="bg-gray-25"] {
+    display: none !important;
+  }
+  
+  /* Ensure comments column is completely hidden in print */
+  .comments-column,
+  .timesheet-table .comments-column,
+  th.comments-column,
+  td.comments-column,
+  [class*="comments-column"],
+  th[class*="comments"],
+  td[class*="comments"] {
+    display: none !important;
+    width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+  }
+  
+  /* Hide any element containing "comments" in class name */
+  [class*="comments"] {
+    display: none !important;
+  }
+  
+  /* Hide TimesheetComments component */
+  .mb-6:has(> div > div[class*="comments"]),
+  div:has(> div[class*="comments"]) {
+    display: none !important;
+  }
+  
+  /* Hide the entire comments section container */
+  .mb-6.print\\:hidden {
+    display: none !important;
+  }
+  
+  /* Additional rules to catch any remaining comment elements */
+  [data-testid*="comments"],
+  [id*="comments"],
+  [class*="TimesheetComments"] {
+    display: none !important;
+  }
+  
+  /* Force hide any table cell that might contain comment content */
+  .timesheet-table td:nth-child(10),
+  .timesheet-table th:nth-child(10) {
+    display: none !important;
+    width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+  }
+  
+  /* Hide any element with comment-related text content */
+  td:contains("Comments"),
+  th:contains("Comments") {
+    display: none !important;
+  }
+  
+  /* Target the specific comments section structure */
+  .bg-white.rounded-lg.border.border-gray-200 {
+    display: none !important;
+  }
+  
+  /* Hide any div containing "Comments" text */
+  div:has(h3:contains("Comments")),
+  div:has(span:contains("Comments")) {
+    display: none !important;
+  }
+  
+  /* Universal PDF hiding - more aggressive approach */
+  /* Hide ALL elements that might contain comment content */
+  *[class*="comment"],
+  *[class*="Comment"],
+  *[id*="comment"],
+  *[id*="Comment"],
+  *[data-*="comment"],
+  *[data-*="Comment"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+  }
+  
+  /* Hide specific comment-related elements by text content */
+  *:contains("Comments"),
+  *:contains("comments"),
+  *:contains("Comment"),
+  *:contains("comment") {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
+  /* Hide the entire comments section by targeting its container */
+  div[class*="mb-6"]:last-child {
+    display: none !important;
+  }
+  
+  /* Hide any element with MessageCircle icon (comments section) */
+  *:has(svg[class*="MessageCircle"]),
+  *:has([class*="MessageCircle"]) {
+    display: none !important;
+  }
+  
+  /* Wider timesheet header for print */
   .timesheet-header {
-    margin-bottom: 10px !important;
+    margin-bottom: 6px !important;
   }
   
   .timesheet-header h3 {
-    font-size: 12px !important;
-    margin-bottom: 5px !important;
-  }
-  
-  .timesheet-header .signature-indicators {
-    font-size: 8px !important;
-  }
-  
-  .timesheet-header .totals {
-    font-size: 10px !important;
-  }
-  
-  /* Summary cards print layout */
-  .summary-cards {
-    display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 10px !important;
-    margin-bottom: 15px !important;
-  }
-  
-  .summary-card {
-    padding: 8px !important;
-    border: 1px solid #000 !important;
-    font-size: 9px !important;
-  }
-  
-  .summary-card h4 {
     font-size: 10px !important;
     margin-bottom: 3px !important;
   }
   
-  /* Signature section print layout */
-  .signatures-section {
+  .timesheet-header .signature-indicators {
+    font-size: 5px !important;
+  }
+  
+  .timesheet-header .totals {
+    font-size: 6px !important;
+  }
+  
+  /* Print grid layout for timesheet header */
+  .print\:grid {
     display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 10px !important;
-    margin-bottom: 15px !important;
+  }
+  
+  .print\:grid-cols-4 {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+  
+  .print\:col-span-2 {
+    grid-column: span 2 / span 2 !important;
+  }
+  
+  .print\:gap-4 {
+    gap: 1rem !important;
+  }
+  
+  .print\:items-center {
+    align-items: center !important;
+  }
+  
+  .print\:mb-2 {
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .print\:text-center {
+    text-align: center !important;
+  }
+  
+  .print\:text-xs {
+    font-size: 0.75rem !important;
+  }
+  
+  .print\:text-lg {
+    font-size: 1.125rem !important;
+  }
+  
+  .print\:font-bold {
+    font-weight: 700 !important;
+  }
+  
+  .print\:inline {
+    display: inline !important;
+  }
+  
+  .print\:ml-1 {
+    margin-left: 0.25rem !important;
+  }
+  
+  .print\:space-x-4 > * + * {
+    margin-left: 1rem !important;
+  }
+  
+  /* Additional print classes for HR page */
+  .print\:col-span-4 {
+    grid-column: span 4 / span 4 !important;
+  }
+  
+  .print\:mb-4 {
+    margin-bottom: 1rem !important;
+  }
+  
+  .print\:p-4 {
+    padding: 1rem !important;
+  }
+  
+  .print\:rounded {
+    border-radius: 0.25rem !important;
+  }
+  
+  /* Summary cards print layout - side by side chips */
+  .summary-cards {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    margin-bottom: 6px !important;
+  }
+  
+  .summary-card {
+    padding: 6px 12px !important;
+    border: 1px solid #000 !important;
+    font-size: 7px !important;
+    background-color: #f8f9fa !important;
+    border-radius: 4px !important;
+    min-width: 80px !important;
+    text-align: center !important;
+  }
+  
+  .summary-card h4 {
+    font-size: 6px !important;
+    margin-bottom: 2px !important;
+    color: #000000 !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+  }
+  
+  .summary-card p {
+    font-size: 9px !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+  }
+  
+  .summary-card .text-2xl {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+  }
+  
+  .summary-card .text-lg {
+    font-size: 9px !important;
+    font-weight: 600 !important;
+  }
+  
+  .summary-card .text-sm {
+    font-size: 7px !important;
+    color: #000000 !important;
+  }
+  
+  /* Signature section print layout - simplified */
+  .signatures-section {
+    margin-bottom: 6px !important;
   }
   
   .signature-box {
-    border: 1px solid #000 !important;
-    padding: 8px !important;
-    font-size: 8px !important;
+    border: 1px solid #9ca3af !important;
+    padding: 6px !important;
+    background-color: #ffffff !important;
+    border-radius: 4px !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    position: relative !important;
   }
   
+  .signature-box p {
+    font-size: 8px !important;
+    color: #000000 !important;
+    margin: 2px 0 !important;
+    text-align: center !important;
+  }
+  
+  /* Ensure signature images are properly sized for print */
   .signature-box img {
-    max-height: 30px !important;
+    max-height: 64px !important;
     width: auto !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 2px !important;
+    padding: 2px !important;
+    background-color: #ffffff !important;
+    display: block !important;
+    margin: 0 auto !important;
+    object-fit: contain !important;
   }
   
   /* Force table to fit page width */
   .overflow-x-auto {
     overflow: visible !important;
+  }
+  
+  /* Header styling for print */
+  h1 {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+    margin-bottom: 4px !important;
+    text-align: center !important;
+  }
+  
+  h3 {
+    font-size: 9px !important;
+    font-weight: 600 !important;
+    color: #000000 !important;
+    margin-bottom: 3px !important;
+  }
+  
+  /* Container styling for print */
+  .max-w-7xl {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Ensure table container uses full width */
+  .overflow-x-auto {
+    overflow: visible !important;
+    width: 100% !important;
+  }
+  
+  .py-6 {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  
+  .px-4 {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  
+  /* Remove all container padding in print for maximum width */
+  .sm\:px-6,
+  .lg\:px-8 {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  
+  /* Compact header layout - single row */
+  .mb-6 {
+    margin-bottom: 4px !important;
+  }
+  
+  /* Compact review header */
+  .p-6 {
+    padding: 4px !important;
+  }
+  
+  /* Reduce vertical spacing */
+  .signatures-section {
+    margin-bottom: 6px !important;
+  }
+  
+  .signature-box {
+    padding: 6px !important;
+  }
+  
+  /* Compact spacing for all sections */
+  .signatures-section + .mb-6 {
+    margin-bottom: 2px !important;
   }
   
   /* Ensure proper page breaks */
@@ -404,5 +767,214 @@
   
   .page-break-inside-avoid {
     page-break-inside: avoid !important;
+  }
+  
+  /* Hide background colors and shadows in print */
+  .bg-gray-50 {
+    background-color: #ffffff !important;
+  }
+  
+  /* Hide sidebar in print view */
+  .lg\:fixed {
+    display: none !important;
+  }
+  
+  /* Ensure main content takes full width in print */
+  .lg\:pl-64 {
+    padding-left: 0 !important;
+  }
+  
+  .shadow {
+    box-shadow: none !important;
+  }
+  
+  /* Ensure text is readable in print */
+  .text-gray-600 {
+    color: #000000 !important;
+  }
+  
+  .text-gray-500 {
+    color: #000000 !important;
+  }
+  
+  /* Hide unnecessary elements in print */
+  .mb-6:not(.summary-cards) {
+    margin-bottom: 4px !important;
+  }
+  
+  /* Compact spacing for all sections */
+  .signatures-section + .mb-6 {
+    margin-bottom: 4px !important;
+  }
+  
+  /* Hide icons in print to save space */
+  .summary-card svg,
+  .signature-box svg {
+    display: none !important;
+  }
+  
+  /* Remove left margin from summary cards since icons are hidden */
+  .summary-card .ml-4 {
+    margin-left: 0 !important;
+  }
+  
+
+
+  /* Signature section print styles */
+  
+  .print\:h-32 {
+    height: 8rem !important;
+  }
+  
+  .print\:relative {
+    position: relative !important;
+  }
+  
+  .print\:absolute {
+    position: absolute !important;
+  }
+  
+  .print\:inset-2 {
+    top: 0.5rem !important;
+    right: 0.5rem !important;
+    bottom: 0.5rem !important;
+    left: 0.5rem !important;
+  }
+  
+  .print\:top-1 {
+    top: 0.25rem !important;
+  }
+  
+  .print\:top-6 {
+    top: 1.5rem !important;
+  }
+  
+  .print\:bottom-1 {
+    bottom: 0.25rem !important;
+  }
+  
+  .print\:left-2 {
+    left: 0.5rem !important;
+  }
+  
+  .print\:right-2 {
+    right: 0.5rem !important;
+  }
+  
+  .print\:z-10 {
+    z-index: 10 !important;
+  }
+  
+  .print\:bg-opacity-90 {
+    background-opacity: 0.9 !important;
+  }
+  
+  .print\:rounded {
+    border-radius: 0.25rem !important;
+  }
+  
+  .print\:items-stretch {
+    align-items: stretch !important;
+  }
+  
+  .print\:max-h-20 {
+    max-height: 5rem !important;
+  }
+  
+  .print\:justify-center {
+    justify-content: center !important;
+  }
+  
+  .print\:gap-2 {
+    gap: 0.5rem !important;
+  }
+  
+  .print\:mb-3 {
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .print\:mb-1 {
+    margin-bottom: 0.25rem !important;
+  }
+  
+  .print\:p-2 {
+    padding: 0.5rem !important;
+  }
+  
+  .print\:p-1 {
+    padding: 0.25rem !important;
+  }
+  
+  .print\:m-0 {
+    margin: 0 !important;
+  }
+  
+  .print\:leading-tight {
+    line-height: 1.25 !important;
+  }
+  
+  /* Summary cards print styles */
+  .summary-cards {
+    margin-bottom: 0.75rem !important;
+  }
+  
+  /* Print mode styles for PDF generation */
+  .print-mode {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 9px !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .print-mode .print\\:hidden {
+    display: none !important;
+  }
+  
+  .print-mode .print\\:block {
+    display: block !important;
+  }
+  
+  .print-mode .timesheet-table {
+    width: 100% !important;
+    font-size: 7px !important;
+    margin-top: 4px !important;
+    border-collapse: collapse !important;
+  }
+  
+  .print-mode .signatures-section {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 6px !important;
+  }
+  
+  .print-mode .summary-cards {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    margin-bottom: 6px !important;
+  }
+  
+  .print-mode .summary-card {
+    padding: 6px 12px !important;
+    border: 1px solid #000 !important;
+    font-size: 7px !important;
+    background-color: #f8f9fa !important;
+    border-radius: 4px !important;
+    min-width: 80px !important;
+    text-align: center !important;
+  }
+  
+  /* Header styling for print - larger and centered */
+  .print\:text-center h1,
+  .print\:block h1 {
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+    margin-bottom: 8px !important;
+    text-align: center !important;
+    width: 100% !important;
+    display: block !important;
   }
 } 

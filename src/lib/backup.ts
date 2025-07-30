@@ -70,7 +70,7 @@ export const createBackup = async (config: Partial<BackupConfig> = {}): Promise<
     
     if (fullConfig.compressionEnabled) {
       // Create compressed backup
-      await execAsync(`gzip -c "${fullConfig.sourcePath}" > "${backupFilePath}"`)
+      await execAsync(`gzip -c '${fullConfig.sourcePath}' > '${backupFilePath}'`)
     } else {
       // Create uncompressed backup
       fs.copyFileSync(fullConfig.sourcePath, backupFilePath)
@@ -186,7 +186,7 @@ export const restoreBackup = async (backupFilename: string): Promise<{ success: 
     
     if (backupFilename.endsWith('.gz')) {
       // Decompress and restore
-      await execAsync(`gzip -dc "${backupFilePath}" > "${config.sourcePath}"`)
+      await execAsync(`gzip -dc '${backupFilePath}' > '${config.sourcePath}'`)
     } else {
       // Direct copy
       fs.copyFileSync(backupFilePath, config.sourcePath)
@@ -287,7 +287,7 @@ export const validateBackup = async (backupFilename: string): Promise<{ valid: b
     // For compressed files, try to test the compression
     if (backupFilename.endsWith('.gz')) {
       try {
-        await execAsync(`gzip -t "${backupFilePath}"`)
+        await execAsync(`gzip -t '${backupFilePath}'`)
       } catch (error) {
         return { valid: false, error: 'Compressed backup file is corrupted' }
       }

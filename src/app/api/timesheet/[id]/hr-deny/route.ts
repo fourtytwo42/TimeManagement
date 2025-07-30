@@ -11,9 +11,11 @@ const TS_STATE = {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -38,7 +40,7 @@ export async function POST(
     }
 
     const timesheet = await prisma.timesheet.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { user: true }
     })
 
@@ -54,7 +56,7 @@ export async function POST(
     }
 
     const updatedTimesheet = await prisma.timesheet.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         state: TS_STATE.PENDING_STAFF,
         managerNote: note, // Store HR denial note in managerNote field
@@ -67,7 +69,7 @@ export async function POST(
       await createTimesheetNotification(
         timesheet.user.id,
         'denial',
-        params.id,
+        id,
         note.trim()
       )
     } catch (notificationError) {

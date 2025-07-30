@@ -12,9 +12,11 @@ const ROLES = {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -30,7 +32,7 @@ export async function GET(
 
     // Verify user has access to this timesheet
     const timesheet = await prisma.timesheet.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: {
@@ -58,7 +60,7 @@ export async function GET(
     // Fetch messages
     const messages = await prisma.timesheetMessage.findMany({
       where: {
-        timesheetId: params.id
+        timesheetId: id
       },
       include: {
         sender: {
@@ -86,9 +88,11 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -111,7 +115,7 @@ export async function POST(
 
     // Verify user has access to this timesheet
     const timesheet = await prisma.timesheet.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: {
@@ -147,7 +151,7 @@ export async function POST(
     // Create the message
     const message = await prisma.timesheetMessage.create({
       data: {
-        timesheetId: params.id,
+        timesheetId: id,
         senderId: user.id,
         content: content.trim()
       },
@@ -188,13 +192,13 @@ export async function POST(
       await createTimesheetMessageNotification(
         recipientId,
         user.name,
-        params.id,
+        id,
         content.trim()
       )
     }
 
     // Fulfill message notifications for the sender
-    await fulfillNotifications(user.id, params.id, 'message_sent')
+    await fulfillNotifications(user.id, id, 'message_sent')
 
     return NextResponse.json(message, { status: 201 })
   } catch (error) {

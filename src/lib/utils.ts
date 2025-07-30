@@ -1,6 +1,6 @@
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
-import { startOfMonth, endOfMonth, addDays, format, parseISO, differenceInMinutes, subMonths, addMonths } from "date-fns"
+import { type ClassValue, clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+import { startOfMonth, endOfMonth, addDays, format, parseISO, differenceInMinutes, subMonths, addMonths } from 'date-fns'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -140,13 +140,13 @@ export function validateTimeEntry(
   
   // Check that each in time is before its corresponding out time
   if (date1In && date1Out && date1In >= date1Out) {
-    errors.push("First in time must be before first out time")
+    errors.push('First in time must be before first out time')
   }
   if (date2In && date2Out && date2In >= date2Out) {
-    errors.push("Second in time must be before second out time")
+    errors.push('Second in time must be before second out time')
   }
   if (date3In && date3Out && date3In >= date3Out) {
-    errors.push("Third in time must be before third out time")
+    errors.push('Third in time must be before third out time')
   }
   
   // Check for overlapping time periods
@@ -164,7 +164,7 @@ export function validateTimeEntry(
         (period1.start <= period2.start && period2.start < period1.end) ||
         (period2.start <= period1.start && period1.start < period2.end)
       ) {
-        errors.push("Time periods cannot overlap")
+        errors.push('Time periods cannot overlap')
         break
       }
     }
@@ -178,10 +178,10 @@ export function validateTimeEntry(
 
 export function validatePlawaHours(plawaHours: number): { isValid: boolean; error?: string } {
   if (plawaHours < 0) {
-    return { isValid: false, error: "PLAWA hours cannot be negative" }
+    return { isValid: false, error: 'PLAWA hours cannot be negative' }
   }
   if (plawaHours > 24) {
-    return { isValid: false, error: "PLAWA hours cannot exceed 24 hours per day" }
+    return { isValid: false, error: 'PLAWA hours cannot exceed 24 hours per day' }
   }
   return { isValid: true }
 }

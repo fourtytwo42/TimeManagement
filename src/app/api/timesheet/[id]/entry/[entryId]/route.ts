@@ -5,9 +5,11 @@ import { validateTimeEntry, validatePlawaHours } from '@/lib/utils'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; entryId: string } }
+  { params }: { params: Promise<{ id: string; entryId: string }> }
 ) {
   try {
+    const { id, entryId } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -81,8 +83,8 @@ export async function PATCH(
     }
 
     const updatedEntry = await updateTimesheetEntry(
-      params.id,
-      params.entryId,
+      id,
+      entryId,
       updateData,
       user.id
     )

@@ -4,9 +4,11 @@ import { prisma } from '@/lib/db'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -23,7 +25,7 @@ export async function PATCH(
     // Check if notification exists and belongs to user
     const notification = await prisma.notification.findFirst({
       where: {
-        id: params.id,
+        id,
         userId: user.id
       }
     })
@@ -34,7 +36,7 @@ export async function PATCH(
 
     // Mark as read
     const updatedNotification = await prisma.notification.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         isRead: true,
         readAt: new Date()

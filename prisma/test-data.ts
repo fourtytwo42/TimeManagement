@@ -1,4 +1,4 @@
-import { PrismaClient, TsState } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 import { getCurrentPayPeriod, getPayPeriodDates } from '../src/lib/utils'
 
 const prisma = new PrismaClient()
@@ -31,7 +31,7 @@ async function createTestTimesheets() {
       userId: staff.id,
       periodStart,
       periodEnd,
-      state: TsState.PENDING_MANAGER,
+      state: 'PENDING_MANAGER',
       staffSig: 'John Staff Digital Signature',
       entries: {
         create: dates.map((date, index) => ({

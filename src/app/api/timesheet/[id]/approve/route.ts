@@ -6,9 +6,11 @@ import { prisma } from '@/lib/db'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -37,7 +39,7 @@ export async function POST(
     }
 
     const updatedTimesheet = await approveTimesheet(
-      params.id,
+      id,
       user.id,
       signature
     )
@@ -45,7 +47,7 @@ export async function POST(
     // Create notifications
     try {
       const timesheet = await prisma.timesheet.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: {
           user: {
             select: { id: true, name: true }
@@ -58,7 +60,7 @@ export async function POST(
         await createTimesheetNotification(
           timesheet.user.id,
           'approval',
-          params.id
+          id
         )
 
         // Notify all HR users that a timesheet needs their approval
@@ -71,12 +73,12 @@ export async function POST(
           await createHRApprovalNotification(
             hrUser.id,
             timesheet.user.name,
-            params.id
+            id
           )
         }
 
         // Fulfill manager approval notifications
-        await fulfillNotifications(user.id, params.id, 'timesheet_approved')
+        await fulfillNotifications(user.id, id, 'timesheet_approved')
       }
     } catch (notificationError) {
       console.error('Failed to create approval notifications:', notificationError)
